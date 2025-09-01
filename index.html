@@ -1,33 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Simple Car Game</title>
+  <title>Car Dodge Game</title>
   <style>
     body { margin: 0; background: #222; }
-    canvas { display: block; margin: auto; background: #444; }
+    canvas { display: block; margin: auto; background: #555; }
   </style>
 </head>
 <body>
 <canvas id="gameCanvas" width="400" height="600"></canvas>
 
 <script>
+// Canvas setup
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+// Load images (free assets from itch.io or similar)
+const roadImg = new Image();
+roadImg.src = "https://i.ibb.co/7bQQYkX/road.png"; // free road texture
+const playerImg = new Image();
+playerImg.src = "https://i.ibb.co/4fKkG7F/car-red.png"; // free top-down car
+const obstacleImgs = [
+  "https://i.ibb.co/3m1tZtF/car-blue.png",
+  "https://i.ibb.co/6X0Vj3t/car-green.png",
+  "https://i.ibb.co/4m1tZtF/bike.png"
+].map(src => {
+  let img = new Image();
+  img.src = src;
+  return img;
+});
+
+// Game variables
 let car = { x: 180, y: 500, width: 40, height: 80, speed: 5 };
 let obstacles = [];
 let obstacleSpeed = 2;
 let keys = {};
+let score = 0;
+let gameOver = false;
+let roadY = 0;
 
-document.addEventListener("keydown", e => keys[e.key] = true);
+// Input
+document.addEventListener("keydown", e => {
+  keys[e.key] = true;
+  if (gameOver) restartGame();
+});
 document.addEventListener("keyup", e => keys[e.key] = false);
 
+// Spawn obstacles
 function spawnObstacle() {
   let x = Math.random() * (canvas.width - 40);
-  obstacles.push({ x: x, y: -80, width: 40, height: 80 });
+  let img = obstacleImgs[Math.floor(Math.random() * obstacleImgs.length)];
+  obstacles.push({ x: x, y: -80, width: 40, height: 80, img: img });
 }
 
+// Update game state
 function update() {
+  if (gameOver) return;
+
   // Move car
   if (keys["ArrowLeft"] && car.x > 0) car.x -= car.speed;
   if (keys["ArrowRight"] && car.x < canvas.width - car.width) car.x += car.speed;
@@ -35,48 +64,76 @@ function update() {
   // Move obstacles
   for (let o of obstacles) {
     o.y += obstacleSpeed;
-    // Collision detection
     if (o.x < car.x + car.width &&
         o.x + o.width > car.x &&
         o.y < car.y + car.height &&
         o.y + o.height > car.y) {
-      alert("Game Over!");
-      document.location.reload();
+      gameOver = true;
     }
   }
 
   // Remove off-screen obstacles
   obstacles = obstacles.filter(o => o.y < canvas.height);
 
-  // Increase speed over time
+  // Increase speed & score
   obstacleSpeed += 0.001;
+  score += 1;
+
+  // Scroll road
+  roadY += obstacleSpeed;
+  if (roadY >= canvas.height) roadY = 0;
 }
 
+// Draw everything
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Draw scrolling road
+  ctx.drawImage(roadImg, 0, roadY - canvas.height, canvas.width, canvas.height);
+  ctx.drawImage(roadImg, 0, roadY, canvas.width, canvas.height);
 
   // Draw car
-  ctx.fillStyle = "red";
-  ctx.fillRect(car.x, car.y, car.width, car.height);
+  ctx.drawImage(playerImg, car.x, car.y, car.width, car.height);
 
   // Draw obstacles
-  ctx.fillStyle = "blue";
   for (let o of obstacles) {
-    ctx.fillRect(o.x, o.y, o.width, o.height);
+    ctx.drawImage(o.img, o.x, o.y, o.width, o.height);
+  }
+
+  // Draw score
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText("Score: " + score, 10, 25);
+
+  // Game over text
+  if (gameOver) {
+    ctx.fillStyle = "red";
+    ctx.font = "30px Arial";
+    ctx.fillText("GAME OVER", 120, 300);
+    ctx.font = "16px Arial";
+    ctx.fillText("Press any key to restart", 110, 330);
   }
 }
 
+// Restart game
+function restartGame() {
+  car.x = 180;
+  car.y = 500;
+  obstacles = [];
+  obstacleSpeed = 2;
+  score = 0;
+  gameOver = false;
+}
+
+// Game loop
 function gameLoop() {
   update();
   draw();
   requestAnimationFrame(gameLoop);
 }
 
-// Spawn obstacles every 1.5 seconds
+// Spawn obstacles every 1.5s
 setInterval(spawnObstacle, 1500);
 
 gameLoop();
 </script>
 </body>
 </html>
-
