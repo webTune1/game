@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Car Dodge Game</title>
+  <title>Simple Car Dodge Game</title>
   <style>
     body { margin: 0; background: #222; text-align: center; }
     canvas { background: #555; display: block; margin: 20px auto; }
@@ -28,20 +28,7 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const playBtn = document.getElementById("playBtn");
 
-// Load images
-function loadImage(src) {
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null); // fallback if image fails
-    img.src = src;
-  });
-}
-
-let roadImg, playerImg, obstacleImgs;
-
-// Game variables
-let car, obstacles, obstacleSpeed, keys, score, gameOver, roadY, gameRunning;
+let car, obstacles, obstacleSpeed, keys, score, gameOver, gameRunning;
 
 function initGame() {
   car = { x: 180, y: 500, width: 40, height: 80, speed: 5 };
@@ -50,7 +37,6 @@ function initGame() {
   keys = {};
   score = 0;
   gameOver = false;
-  roadY = 0;
   gameRunning = true;
 }
 
@@ -60,16 +46,17 @@ document.addEventListener("keyup", e => keys[e.key] = false);
 function spawnObstacle() {
   if (!gameRunning) return;
   let x = Math.random() * (canvas.width - 40);
-  let img = obstacleImgs[Math.floor(Math.random() * obstacleImgs.length)];
-  obstacles.push({ x: x, y: -80, width: 40, height: 80, img: img });
+  obstacles.push({ x: x, y: -80, width: 40, height: 80 });
 }
 
 function update() {
   if (!gameRunning) return;
 
+  // Move car
   if (keys["ArrowLeft"] && car.x > 0) car.x -= car.speed;
   if (keys["ArrowRight"] && car.x < canvas.width - car.width) car.x += car.speed;
 
+  // Move obstacles
   for (let o of obstacles) {
     o.y += obstacleSpeed;
     if (o.x < car.x + car.width &&
@@ -83,41 +70,27 @@ function update() {
     }
   }
 
+  // Remove off-screen obstacles
   obstacles = obstacles.filter(o => o.y < canvas.height);
 
+  // Increase speed & score
   obstacleSpeed += 0.001;
   score += 1;
-
-  roadY += obstacleSpeed;
-  if (roadY >= canvas.height) roadY = 0;
 }
 
 function draw() {
-  // Road
-  if (roadImg) {
-    ctx.drawImage(roadImg, 0, roadY - canvas.height, canvas.width, canvas.height);
-    ctx.drawImage(roadImg, 0, roadY, canvas.width, canvas.height);
-  } else {
-    ctx.fillStyle = "#333";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
+  // Background road
+  ctx.fillStyle = "#333";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Player car
-  if (playerImg) {
-    ctx.drawImage(playerImg, car.x, car.y, car.width, car.height);
-  } else {
-    ctx.fillStyle = "red";
-    ctx.fillRect(car.x, car.y, car.width, car.height);
-  }
+  ctx.fillStyle = "red";
+  ctx.fillRect(car.x, car.y, car.width, car.height);
 
   // Obstacles
+  ctx.fillStyle = "blue";
   for (let o of obstacles) {
-    if (o.img) {
-      ctx.drawImage(o.img, o.x, o.y, o.width, o.height);
-    } else {
-      ctx.fillStyle = "blue";
-      ctx.fillRect(o.x, o.y, o.width, o.height);
-    }
+    ctx.fillRect(o.x, o.y, o.width, o.height);
   }
 
   // Score
@@ -126,7 +99,7 @@ function draw() {
   ctx.fillText("Score: " + score, 10, 25);
 
   if (gameOver) {
-    ctx.fillStyle = "red";
+    ctx.fillStyle = "yellow";
     ctx.font = "30px Arial";
     ctx.fillText("GAME OVER", 120, 300);
   }
@@ -139,25 +112,13 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// Play button
 playBtn.addEventListener("click", () => {
   initGame();
   playBtn.style.display = "none";
 });
 
-// Start game after loading images
-(async function start() {
-  roadImg = await loadImage("https://i.ibb.co/7bQQYkX/road.png");
-  playerImg = await loadImage("https://i.ibb.co/4fKkG7F/car-red.png");
-  obstacleImgs = await Promise.all([
-    loadImage("https://i.ibb.co/3m1tZtF/car-blue.png"),
-    loadImage("https://i.ibb.co/6X0Vj3t/car-green.png"),
-    loadImage("https://i.ibb.co/4m1tZtF/bike.png")
-  ]);
-
-  setInterval(spawnObstacle, 1500);
-  gameLoop();
-})();
+setInterval(spawnObstacle, 1500);
+gameLoop();
 </script>
 </body>
 </html>
