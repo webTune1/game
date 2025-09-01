@@ -1,69 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Test Drive</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="game-shell">
-    <div class="hud-bar">
-      <div class="hud-item">
-        <span class="hud-icon">🏁</span>
-        <span id="score">0</span>
-      </div>
-      <div class="hud-item">
-        <span class="hud-icon">🪙</span>
-        <span id="coins">0</span>
-      </div>
-      <div class="hud-item fuel">
-        <span class="hud-icon">⛽</span>
-        <div class="fuel-bar"><div id="fuel-bar-inner"></div></div>
-      </div>
-      <div class="hud-item" id="lifeSaverHud" style="display:none;">
-        <span class="hud-icon">🛡️</span>
-        <span id="lifeSaverCount">1</span>
-      </div>
-      <div class="hud-powerups">
-        <span id="magnetPower" class="powerup-hud" hidden>🧲 <span id="magnetTimer">0</span></span>
-        <span id="boostPower" class="powerup-hud" hidden>⚡ <span id="boostTimer">0</span></span>
-      </div>
-      <div class="toggle-mode-btn" id="toggleModeBtn" title="Toggle night mode"></div>
-    </div>
-    <div class="canvas-container">
-      <canvas id="gameCanvas" width="400" height="600" aria-label="Game canvas"></canvas>
-      <div class="overlay" id="menuOverlay">
-        <div class="overlay-card">
-          <h1>🚗 Test Drive</h1>
-          <p>Collect coins, dodge traffic, and survive as long as you can!</p>
-          <button id="playBtn" class="main-btn">Play</button>
-        </div>
-      </div>
-      <div class="overlay" id="gameOverOverlay" style="display:none;">
-        <div class="overlay-card">
-          <h2>Game Over</h2>
-          <div id="finalScore"></div>
-          <button id="restartBtn" class="main-btn">Play Again</button>
-        </div>
-      </div>
-      <div class="overlay" id="pauseOverlay" style="display:none;">
-        <div class="overlay-card">
-          <h2>Paused</h2>
-          <p>Tap <b>Space</b> or the button below to resume.</p>
-          <button id="resumeBtn" class="main-btn">Resume</button>
-        </div>
-      </div>
-      <div class="mobile-controls">
-        <button class="ctrl-btn" id="leftBtn">⬅</button>
-        <button class="ctrl-btn" id="pauseBtn">⏸</button>
-        <button class="ctrl-btn" id="rightBtn">➡</button>
-      </div>
-    </div>
-    <div class="hint-bar">
-      <span>← / → or swipe to move · Space/Pause to start/pause</span>
-    </div>
+<canvas id="gameCanvas"></canvas>
+<div id="menuOverlay">
+  <button id="playBtn">Play</button>
+</div>
+<div id="gameOverOverlay" style="display:none;">
+  <div id="finalScore"></div>
+  <button id="restartBtn">Restart</button>
+</div>
+<div id="pauseOverlay" style="display:none;">
+  <button id="resumeBtn">Resume</button>
+</div>
+<div class="mobile-controls" style="display:none;">
+  <button id="leftBtn">←</button>
+  <button id="rightBtn">→</button>
+  <button id="pauseBtn">Pause</button>
+</div>
+<div>
+  Score: <span id="score">0</span> | Coins: <span id="coins">0</span>
+  <div id="fuel-bar" style="width:60px; background:#222; height:9px;">
+    <div id="fuel-bar-inner" style="height:9px; background:#2be782; width:60px;"></div>
   </div>
-  <script src="game.js"></script>
-</body>
-</html>
+</div>
