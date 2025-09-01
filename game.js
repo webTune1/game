@@ -1,11 +1,10 @@
-// --- Test Drive Classic Vector Car Game Logic ---
-// Assumes cars.js contains HD vector car art for both player and obstacles
+// Test Drive - Classic Vector Car Game Logic (Night Mode with Headlights)
+// Works with cars.js (window.CAR_MODELS.player, window.CAR_MODELS.obstacles)
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const DPR = window.devicePixelRatio || 1;
 
-// Responsive sizing
 function fitCanvas() {
   let w = Math.min(window.innerWidth * 0.95, 400);
   let h = Math.max(w * 1.5, 600);
@@ -31,27 +30,19 @@ const LANE_COUNT = 3;
 const ROAD_MARGIN = 34;
 const ROAD_EDGE = 8;
 
-function roadLeft() {
-  return ROAD_MARGIN + ROAD_EDGE;
-}
-function roadRight() {
-  return (canvas.width / DPR) - ROAD_MARGIN - ROAD_EDGE;
-}
-function roadWidth() {
-  return roadRight() - roadLeft();
-}
-function laneWidth() {
-  return roadWidth() / LANE_COUNT;
-}
+function roadLeft() { return ROAD_MARGIN + ROAD_EDGE; }
+function roadRight() { return (canvas.width / DPR) - ROAD_MARGIN - ROAD_EDGE; }
+function roadWidth() { return roadRight() - roadLeft(); }
+function laneWidth() { return roadWidth() / LANE_COUNT; }
 
 // --- MAIN CAR & OBSTACLES ---
 let player, obstacles, coins, powerups, score, coinCount, fuel;
 let baseSpeed, spawnObsTimer, spawnCoinTimer, spawnPowTimer;
 let magnetTimer = 0, boostTimer = 0;
 let keys = {}, touchMove = 0, holdingLeft = false, holdingRight = false;
-let swipeStart = null, last = performance.now();
+let last = performance.now();
 let scroll = 0;
-let nightMode = true; // Only night mode, as requested
+const nightMode = true; // Only night mode
 
 // --- UI Elements ---
 const scoreSpan = document.getElementById('score');
@@ -109,7 +100,7 @@ function spawnObstacle() {
   // Avoid stacking
   if (obstacles.length && Math.abs(obstacles[obstacles.length-1].lane-laneIndex)<1)
     laneIndex = (laneIndex+1)%LANE_COUNT;
-  // Choose car or bus or bike from cars.js obstacles
+  // Pick car from cars.js obstacles array
   const carDefs = window.CAR_MODELS.obstacles;
   const carDef = carDefs[Math.floor(rand(0, carDefs.length))];
   let w = carDef.w, h = carDef.h;
