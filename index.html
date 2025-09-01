@@ -1,58 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Vector Car Dodge Deluxe</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root{
-      --ui-bg:#0e0e10; --road-top:#2d2d2d; --road-bottom:#1f1f1f;
-      --edge:#555; --lane:#dcdcdc; --player:#e74c3c;
-      --car1-top:#4da3ff; --car1-bottom:#1f5fa3;
-      --bus-top:#f7d94c; --bus-bottom:#d4a017;
-      --coin:#ffd24d; --magnet:#ff6b6b; --boost:#66e0ff; --shield:#8df58d;
-      --text:#ffffff; --accent:#ffbb33;
-    }
-    html,body{margin:0;height:100%;background:var(--ui-bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;text-align:center;}
-    h1{margin:10px 0;color:var(--accent);font-size:22px}
-    .wrap{max-width:480px;margin:0 auto;padding:10px}
-    #playBtn{
-      padding:10px 20px;font-size:16px;background:#28a745;color:#fff;border:none;border-radius:8px;cursor:pointer;
-      box-shadow:0 6px 20px rgba(0,0,0,.4);
-    }
-    #playBtn:hover{background:#218838}
-    canvas{
-      display:block;margin:12px auto;border-radius:14px;background:#222;
-      box-shadow:0 18px 60px rgba(0,0,0,.55);
-      touch-action:none;
-    }
-    .hint{font-size:12px;opacity:.8;margin-top:6px}
-  </style>
+<meta charset="UTF-8" />
+<title>Vector Car Dodge Deluxe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --ui-bg:#0e0e10; --road-top:#2d2d2d; --road-bottom:#1f1f1f;
+    --edge:#555; --lane:#dcdcdc; --player:#e74c3c;
+    --car1-top:#4da3ff; --car1-bottom:#1f5fa3;
+    --bus-top:#f7d94c; --bus-bottom:#d4a017;
+    --coin:#ffd24d; --magnet:#ff6b6b; --boost:#66e0ff; --shield:#8df58d;
+    --text:#ffffff; --accent:#ffbb33;
+  }
+  html,body{
+    margin:0;height:100%;background:var(--ui-bg);color:var(--text);
+    font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;text-align:center;
+  }
+  h1{margin:10px 0;color:var(--accent);font-size:clamp(18px,4vw,24px)}
+  .wrap{max-width:480px;margin:0 auto;padding:10px}
+  #playBtn{
+    padding:10px 20px;font-size:16px;background:#28a745;color:#fff;border:none;border-radius:8px;cursor:pointer;
+    box-shadow:0 6px 20px rgba(0,0,0,.4);
+  }
+  #playBtn:hover{background:#218838}
+  canvas{
+    display:block;margin:12px auto;border-radius:14px;background:#222;
+    box-shadow:0 18px 60px rgba(0,0,0,.55);
+    touch-action:none;max-width:100%;height:auto;
+  }
+  .controls{display:flex;justify-content:space-around;margin-top:8px}
+  .ctrl-btn{
+    background:#444;color:white;font-size:24px;
+    padding:12px 20px;border:none;border-radius:8px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.4);
+    user-select:none;
+  }
+  .ctrl-btn:active{background:#666}
+  .hint{font-size:12px;opacity:.8;margin-top:6px}
+</style>
 </head>
 <body>
   <div class="wrap">
     <h1>🚗 Vector Car Dodge Deluxe</h1>
     <button id="playBtn">Play</button>
     <canvas id="game" width="400" height="600" aria-label="Game canvas"></canvas>
-    <div class="hint">Move: Arrow Left/Right · After crash with shield, you blink and keep going</div>
+    <div class="controls" id="mobileControls" style="display:none;">
+      <button class="ctrl-btn" id="leftBtn">⬅</button>
+      <button class="ctrl-btn" id="rightBtn">➡</button>
+    </div>
+    <div class="hint">Move with Arrow Left/Right or touch buttons · Shield lets you survive one crash</div>
   </div>
-  <script>
-// Canvas and DPR scaling
+<script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const playBtn = document.getElementById('playBtn');
+const leftBtn = document.getElementById('leftBtn');
+const rightBtn = document.getElementById('rightBtn');
+const mobileControls = document.getElementById('mobileControls');
+
+const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+// DPR scaling while preserving 400x600 logical size
 function fitDPR(){
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  const rectW = 400, rectH = 600;
-  canvas.style.width = rectW+'px';
-  canvas.style.height = rectH+'px';
-  canvas.width = Math.round(rectW * dpr);
-  canvas.height = Math.round(rectH * dpr);
-  ctx.setTransform(dpr,0,0,dpr,0,0); // draw in CSS pixels
+  const w = 400, h = 600;
+  // Canvas scales to container width (responsive)
+  canvas.style.width = '100%';
+  canvas.style.height = 'auto';
+  // Set actual pixels for crispness
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  // Draw using CSS pixels
+  ctx.setTransform(dpr,0,0,dpr,0,0);
 }
-fitDPR(); addEventListener('resize', fitDPR);
+fitDPR();
+addEventListener('resize', fitDPR);
 
-// Game states
 const STATE = { MENU:'menu', PLAYING:'playing', GAMEOVER:'gameover' };
 let gameState = STATE.MENU;
 
@@ -62,18 +86,15 @@ const roadEdge = 6;
 const lanes = 3;
 let scroll = 0;
 
-// Player and world
+// World
 let player, obstacles, coins, powerups;
 let score, coinCount;
 let baseSpeed, spawnObsTimer, spawnCoinTimer, spawnPowTimer;
 let keys = {};
 let last = performance.now();
 
-// Power timers
-let magnetTimer = 0;
-let boostTimer = 0;
-let invincibleTimer = 0;
-let hasShield = false;
+// Power states
+let magnetTimer = 0, boostTimer = 0, invincibleTimer = 0, hasShield = false;
 
 // Input
 document.addEventListener('keydown', e => {
@@ -82,35 +103,37 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('keyup', e => { keys[e.key] = false; });
 
+// Mobile buttons
+leftBtn.addEventListener('touchstart', e => { e.preventDefault(); keys['ArrowLeft']=true; }, {passive:false});
+leftBtn.addEventListener('touchend',   e => { e.preventDefault(); keys['ArrowLeft']=false; }, {passive:false});
+rightBtn.addEventListener('touchstart',e => { e.preventDefault(); keys['ArrowRight']=true; }, {passive:false});
+rightBtn.addEventListener('touchend',  e => { e.preventDefault(); keys['ArrowRight']=false; }, {passive:false});
+
 // Helpers
 function rand(min,max){ return Math.random()*(max-min)+min; }
 function chance(p){ return Math.random()<p; }
 function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-
-// Road bounds
 function roadLeft(){ return roadMargin + roadEdge; }
-function roadRight(){ return canvas.width/ (window.devicePixelRatio||1) - roadMargin - roadEdge; }
+function roadRight(){ return canvas.width/(window.devicePixelRatio||1) - roadMargin - roadEdge; }
 function roadWidth(){ return roadRight() - roadLeft(); }
-
-// Rounded rect
-function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y);
+function roundRect(x,y,w,h,r){
+  ctx.beginPath(); ctx.moveTo(x+r,y);
   ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill(); }
-
-// Glow helper
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath(); ctx.fill();
+}
 function withGlow(color, blur, drawFn){
-  ctx.save();
-  ctx.shadowColor = color;
-  ctx.shadowBlur = blur;
-  drawFn();
-  ctx.restore();
+  ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = blur; drawFn(); ctx.restore();
 }
 
 // Init/reset
 function initGame(){
-  const rw = roadWidth(), rl = roadLeft();
-  const laneW = rw/lanes;
-  player = { w:40, h:70, x: rl + laneW + (laneW-40)/2, y: 600-90, speed: 280, vx:0, trail:[] };
+  const rl = roadLeft(), rw = roadWidth(), laneW = rw/lanes;
+  player = {
+    w:40, h:70,
+    x: rl + 1*laneW + (laneW-40)/2, // exact middle lane
+    y: 600-90, speed: 280, vx:0, trail:[]
+  };
   obstacles = [];
   coins = [];
   powerups = [];
@@ -127,7 +150,6 @@ function initGame(){
   scroll = 0;
   last = performance.now();
 }
-// Spawning
 function spawnObstacle(){
   const rl = roadLeft(), rw = roadWidth(), laneW = rw/lanes;
   const laneIndex = Math.floor(Math.random()*lanes);
@@ -160,24 +182,22 @@ function spawnPowerup(){
   powerups.push({x,y,w:24,h:24,vy,kind});
 }
 
-// Update
 function update(dt){
-  // Speed factor (boost)
   const speedFactor = boostTimer>0 ? 1.6 : 1.0;
+  const rl = roadLeft(), rr = roadRight();
 
   // Player input
-  const rl = roadLeft(), rr = roadRight();
   player.vx = 0;
   if (keys['ArrowLeft'])  player.vx -= player.speed;
   if (keys['ArrowRight']) player.vx += player.speed;
   player.x += player.vx * dt;
   player.x = clamp(player.x, rl, rr - player.w);
 
-  // Scroll road
+  // Scroll
   scroll += baseSpeed * speedFactor * 0.6 * dt;
   const pattern = 50; if (scroll > pattern) scroll -= pattern;
 
-  // Obstacles move and bounce off road edges
+  // Obstacles
   for (const o of obstacles){
     o.y += o.vy * speedFactor * dt;
     o.x += o.vx * dt;
@@ -186,60 +206,61 @@ function update(dt){
   }
   obstacles = obstacles.filter(o => o.y < 600 + 120);
 
-  // Coins movement + magnet attraction
+  // Coins + magnet attraction
   const pcx = player.x + player.w/2, pcy = player.y + player.h/2;
   for (const c of coins){
     c.y += (c.vy * speedFactor) * dt;
     if (magnetTimer > 0){
       const dx = pcx - c.x, dy = pcy - c.y;
       const dist = Math.hypot(dx,dy) || 1;
-      const pull = clamp(240 / dist, 0.5, 6.0); // stronger when close
+      const pull = clamp(260 / dist, 0.6, 6.5);
       c.vx = dx * pull; c.x += c.vx * dt;
       c.y += dy * pull * dt;
     }
   }
   coins = coins.filter(c => c.y < 600 + 60);
 
-  // Powerups movement
+  // Powerups
   for (const p of powerups){ p.y += (p.vy * speedFactor) * dt; }
   powerups = powerups.filter(p => p.y < 600 + 60);
 
-  // Collisions: player vs obstacles
+  // Collisions: obstacles
   if (invincibleTimer > 0) invincibleTimer -= dt;
-  let collided = false;
+  let hit = false;
   for (const o of obstacles){
     if (o.x < player.x + player.w && o.x + o.w > player.x &&
         o.y < player.y + player.h && o.y + o.h > player.y){
-      collided = true; break;
+      hit = true; break;
     }
   }
-  if (collided){
+  if (hit){
     if (invincibleTimer <= 0){
       if (hasShield){
         hasShield = false;
         invincibleTimer = 1.0; // blink for a second
-      }else{
+      } else {
         gameState = STATE.GAMEOVER;
         playBtn.style.display = 'inline-block';
         playBtn.textContent = 'Play Again';
+        if (isTouch) mobileControls.style.display = 'flex';
       }
     }
   }
 
-  // Collisions: player vs coins
+  // Collisions: coins (circle vs AABB)
   for (let i=coins.length-1;i>=0;i--){
     const c = coins[i];
-    const nearestX = clamp(c.x, player.x, player.x + player.w);
-    const nearestY = clamp(c.y, player.y, player.y + player.h);
-    const dx = c.x - nearestX, dy = c.y - nearestY;
-    if (dx*dx + dy*dy < (c.r*c.r)){
+    const nx = clamp(c.x, player.x, player.x + player.w);
+    const ny = clamp(c.y, player.y, player.y + player.h);
+    const dx = c.x - nx, dy = c.y - ny;
+    if (dx*dx + dy*dy < c.r*c.r){
       coins.splice(i,1);
       coinCount += 1;
-      score += 5; // small bonus
+      score += 5;
     }
   }
 
-  // Collisions: player vs powerups
+  // Collisions: powerups
   for (let i=powerups.length-1;i>=0;i--){
     const p = powerups[i];
     if (p.x < player.x + player.w && p.x + p.w > player.x &&
@@ -254,19 +275,18 @@ function update(dt){
   // Timers and difficulty
   if (magnetTimer>0) magnetTimer -= dt;
   if (boostTimer>0)  boostTimer -= dt;
-
   score += dt * 60;
-  baseSpeed += dt * 2; // slowly ramps up
+  baseSpeed += dt * 2;
 
-  // Spawn cadence
+  // Spawning (more coins)
   spawnObsTimer += dt;
   spawnCoinTimer += dt;
   spawnPowTimer += dt;
   if (spawnObsTimer > 1.0){ spawnObsTimer = 0; spawnObstacle(); }
-  if (spawnCoinTimer > 0.75){ spawnCoinTimer = 0; if (chance(0.8)) spawnCoin(); }
-  if (spawnPowTimer > 5.0){ spawnPowTimer = 0; if (chance(0.8)) spawnPowerup(); }
+  if (spawnCoinTimer > 0.55){ spawnCoinTimer = 0; if (chance(0.9)) spawnCoin(); } // more coins
+  if (spawnPowTimer > 4.5){ spawnPowTimer = 0; if (chance(0.8)) spawnPowerup(); }
 
-  // Player trail for boost
+  // Boost trail entries
   player.trail.push({x:player.x, y:player.y, w:player.w, h:player.h, t:0.35});
   if (player.trail.length>12) player.trail.shift();
   for (const t of player.trail) t.t -= dt;
@@ -291,7 +311,7 @@ function drawRoad(){
   for (let i=1;i<lanes;i++){
     const x = rl + i*laneW;
     for (let y=-dashH;y<600+dashH;y+=dashH+gap){
-      ctx.fillRect(x-2, y + (scroll% (dashH+gap)), 4, dashH);
+      ctx.fillRect(x-2, y + (scroll % (dashH+gap)), 4, dashH);
     }
   }
 }
@@ -311,19 +331,19 @@ function drawVehicle(v){
   ctx.fillRect(v.x+5, v.y+8, v.w-10, 14);
   ctx.fillRect(v.x+5, v.y+v.h-22, v.w-10, 14);
 
-  // Blink indicators when changing direction
+  // Blinking turn indicators for drifting vehicles
   if (Math.abs(v.vx) > 0.1){
     const blink = Math.floor(performance.now()/250)%2===0;
     if (blink){
       ctx.fillStyle = 'orange';
       const s=8;
-      if (v.vx>0){ // right
+      if (v.vx>0){
         ctx.beginPath();
         ctx.moveTo(v.x+v.w, v.y+v.h/2 - s);
         ctx.lineTo(v.x+v.w+s, v.y+v.h/2);
         ctx.lineTo(v.x+v.w, v.y+v.h/2 + s);
         ctx.closePath(); ctx.fill();
-      }else{ // left
+      }else{
         ctx.beginPath();
         ctx.moveTo(v.x, v.y+v.h/2 - s);
         ctx.lineTo(v.x-s, v.y+v.h/2);
@@ -340,20 +360,19 @@ function drawPlayer(){
   if (boostTimer>0){
     for (let i=0;i<player.trail.length;i++){
       const t = player.trail[i]; if (t.t<=0) continue;
-      const a = Math.max(0, Math.min(0.25, t.t*0.4));
+      const a = Math.max(0, Math.min(0.28, t.t*0.45));
       ctx.fillStyle = `rgba(102,224,255,${a})`;
       roundRect(t.x, t.y+6, t.w, t.h-12, 10);
     }
   }
-
-  // Car body
+  // Body
   ctx.fillStyle = getVar('--player','#e74c3c');
   ctx.strokeStyle = '#221c1c'; ctx.lineWidth = 2;
   roundRect(player.x, player.y, player.w, player.h, 8); ctx.stroke();
   // Windshield
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
   ctx.fillRect(player.x+5, player.y+8, player.w-10, 14);
-  // Brake lights (when not moving sideways)
+  // Brake lights when not steering
   if (!keys['ArrowLeft'] && !keys['ArrowRight']){
     withGlow('rgba(255,70,70,0.6)', 8, ()=>{
       ctx.fillStyle = 'rgba(255,70,70,0.9)';
@@ -361,11 +380,10 @@ function drawPlayer(){
       ctx.fillRect(player.x+player.w-14, player.y+player.h-10, 8, 6);
     });
   }
-
   // Magnet aura
   if (magnetTimer>0){
     const alpha = 0.25 + 0.15*Math.sin(performance.now()/200);
-    withGlow('rgba(255,107,107,0.6)', 12, ()=>{
+    withGlow('rgba(255,107,107,0.6)', 14, ()=>{
       ctx.strokeStyle = `rgba(255,107,107,${alpha})`;
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -373,52 +391,47 @@ function drawPlayer(){
       ctx.stroke();
     });
   }
-
-  // Shield ring if active
+  // Shield ring (or invincible blink)
   if (hasShield || invincibleTimer>0){
     const blink = invincibleTimer>0 ? Math.floor(performance.now()/120)%2===0 : true;
     if (blink){
       withGlow('rgba(141,245,141,0.7)', 10, ()=>{
         ctx.strokeStyle = 'rgba(141,245,141,0.9)';
         ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.roundRect?.(player.x-6, player.y-6, player.w+12, player.h+12, 10);
-        if (!ctx.roundRect){ roundRect(player.x-6, player.y-6, player.w+12, player.h+12, 10); ctx.stroke(); }
-        else ctx.stroke();
+        if (ctx.roundRect){
+          ctx.beginPath();
+          ctx.roundRect(player.x-6, player.y-6, player.w+12, player.h+12, 10);
+          ctx.stroke();
+        } else {
+          roundRect(player.x-6, player.y-6, player.w+12, player.h+12, 10);
+          ctx.stroke();
+        }
       });
     }
   }
 }
 
 function drawCoin(c){
-  const glow = 10;
-  withGlow('rgba(255,210,77,0.7)', glow, ()=>{
-    // coin body
+  withGlow('rgba(255,210,77,0.8)', 14, ()=>{
     ctx.fillStyle = getVar('--coin','#ffd24d');
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill();
-    // shine
+    ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill();
+    // Shine
     ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.beginPath();
-    ctx.arc(c.x-3, c.y-3, c.r*0.55, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(c.x-3, c.y-3, c.r*0.55, 0, Math.PI*2); ctx.fill();
   });
 }
 
 function drawPowerup(p){
   ctx.save();
-  // Card
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
   roundRect(p.x, p.y, p.w, p.h, 6);
-  // Icon
   if (p.kind==='magnet'){
     ctx.fillStyle = getVar('--magnet','#ff6b6b');
-    // U-shape magnet
     ctx.fillRect(p.x+5, p.y+5, 6, p.h-10);
     ctx.fillRect(p.x+p.w-11, p.y+5, 6, p.h-10);
     ctx.fillRect(p.x+5, p.y+5, p.w-10, 8);
   } else if (p.kind==='boost'){
     ctx.fillStyle = getVar('--boost','#66e0ff');
-    // lightning bolt
     ctx.beginPath();
     ctx.moveTo(p.x+p.w/2-4, p.y+4);
     ctx.lineTo(p.x+p.w/2+2, p.y+4);
@@ -442,12 +455,10 @@ function drawHUD(){
   ctx.fillStyle = '#fff'; ctx.font = '16px system-ui, sans-serif'; ctx.textAlign = 'left';
   ctx.fillText(`Score: ${Math.floor(score)}`, 10, 22);
   ctx.fillText(`Coins: ${coinCount}`, 10, 42);
-
-  // Power timers
   ctx.textAlign = 'right';
-  if (magnetTimer>0) ctx.fillText(`Magnet: ${Math.ceil(magnetTimer)}s`, 390, 22);
+   if (magnetTimer>0) ctx.fillText(`Magnet: ${Math.ceil(magnetTimer)}s`, 390, 22);
   if (boostTimer>0)  ctx.fillText(`Boost: ${Math.ceil(boostTimer)}s`, 390, 42);
-  if (hasShield)      ctx.fillText(`Shield`, 390, 62);
+  if (hasShield)     ctx.fillText(`Shield`, 390, 62);
 }
 
 function getVar(name, fallback){
@@ -457,11 +468,11 @@ function getVar(name, fallback){
 function drawMenu(){
   drawRoad();
   ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-  ctx.font = 'bold 26px system-ui, sans-serif';
+  ctx.font = 'bold 24px system-ui, sans-serif';
   ctx.fillText('Vector Car Dodge Deluxe', 200, 260);
   ctx.font = '14px system-ui, sans-serif';
   ctx.fillText('Press Play to start', 200, 288);
-  ctx.fillText('Collect coins. Grab power-ups: Magnet, Boost, Shield.', 200, 312);
+  ctx.fillText('Collect coins & power-ups: Magnet, Boost, Shield', 200, 312);
 }
 
 function drawGameOver(){
@@ -505,6 +516,7 @@ function startGame(){
   initGame();
   gameState = STATE.PLAYING;
   playBtn.style.display = 'none';
+  if (isTouch) mobileControls.style.display = 'flex';
 }
 
 playBtn.addEventListener('click', startGame);
@@ -513,8 +525,9 @@ playBtn.addEventListener('click', startGame);
 initGame();
 gameState = STATE.MENU;
 playBtn.style.display = 'inline-block';
+if (isTouch) mobileControls.style.display = 'flex';
 requestAnimationFrame(loop);
-  </script>
+</script>
 </body>
 </html>
-```
+
