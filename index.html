@@ -1,563 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Vector Car Dodge with Fuel & Pause</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>
-  :root{
-    --ui-bg:#0e0e10; --road-top:#2d2d2d; --road-bottom:#1f1f1f;
-    --edge:#555; --lane:#dcdcdc; --player:#e74c3c;
-    --car1-top:#4da3ff; --car1-bottom:#1f5fa3;
-    --bus-top:#f7d94c; --bus-bottom:#d4a017;
-    --coin:#ffd24d; --magnet:#ff6b6b; --boost:#66e0ff; --shield:#8df58d;
-    --text:#ffffff; --accent:#ffbb33;
-  }
-  html,body{
-    margin:0;height:100%;background:var(--ui-bg);color:var(--text);
-    font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;text-align:center;
-  }
-  h1{margin:10px 0;color:var(--accent);font-size:clamp(18px,4vw,24px)}
-  .wrap{max-width:480px;margin:0 auto;padding:10px}
-  #playBtn,#pauseBtn{
-    padding:10px 20px;font-size:16px;background:#28a745;color:#fff;
-    border:none;border-radius:8px;cursor:pointer;margin:4px;
-    box-shadow:0 6px 20px rgba(0,0,0,.4);
-  }
-  #playBtn:hover,#pauseBtn:hover{background:#218838}
-  canvas{
-    display:block;margin:12px auto;border-radius:14px;background:#222;
-    box-shadow:0 18px 60px rgba(0,0,0,.55);
-    touch-action:none;max-width:100%;height:auto;
-  }
-  .controls{display:flex;justify-content:space-around;margin-top:8px}
-  .ctrl-btn{
-    background:#444;color:white;font-size:24px;
-    padding:12px 20px;border:none;border-radius:8px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.4);user-select:none;
-  }
-  .ctrl-btn:active{background:#666}
-  .hint{font-size:12px;opacity:.8;margin-top:6px}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Clean Centered UI Example</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --bg: #f8fafc;
+      --card-bg: #fff;
+      --text: #1e293b;
+      --input-bg: #f1f5f9;
+      --border: #e2e8f0;
+      --shadow: 0 4px 32px 0 rgba(31, 41, 55, 0.07);
+
+      /* Dark mode */
+      --bg-dark: #18181b;
+      --card-bg-dark: #23232a;
+      --text-dark: #f4f4f5;
+      --input-bg-dark: #2c2c36;
+      --border-dark: #32323e;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.3s, color 0.3s;
+    }
+    body.dark {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+    .container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: var(--card-bg);
+      box-shadow: var(--shadow);
+      border-radius: 18px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background 0.3s;
+      border: 1px solid var(--border);
+    }
+    body.dark .card {
+      background: var(--card-bg-dark);
+      border-color: var(--border-dark);
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      letter-spacing: -1px;
+    }
+    .input-group {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    input[type="text"], input[type="email"], input[type="password"] {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    input[type="text"]:focus,
+    input[type="email"]:focus,
+    input[type="password"]:focus {
+      border-color: var(--primary);
+      background: #fff;
+    }
+    body.dark input[type="text"],
+    body.dark input[type="email"],
+    body.dark input[type="password"] {
+      background: var(--input-bg-dark);
+      color: var(--text-dark);
+      border-color: var(--border-dark);
+    }
+    body.dark input[type="text"]:focus,
+    body.dark input[type="email"]:focus,
+    body.dark input[type="password"]:focus {
+      background: #23232a;
+      border-color: var(--primary);
+    }
+    button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 2px 8px 0 rgba(79, 70, 229, 0.10);
+    }
+    button:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px) scale(1.02);
+    }
+    .toggle-theme {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 1.2rem;
+      cursor: pointer;
+      margin-bottom: 1.5rem;
+      align-self: flex-end;
+      transition: color 0.2s;
+    }
+    body.dark .toggle-theme {
+      color: #fbbf24;
+    }
+    .result {
+      margin-top: 1rem;
+      padding: 1rem;
+      width: 100%;
+      border-radius: 8px;
+      background: #f3f4f6;
+      color: #23272f;
+      text-align: center;
+      transition: background 0.3s, color 0.3s;
+      font-size: 1.05rem;
+      min-height: 2rem;
+    }
+    body.dark .result {
+      background: #22222b;
+      color: #f4f4f5;
+    }
+    @media (max-width: 600px) {
+      .card {
+        padding: 1.2rem 0.5rem;
+        max-width: 95vw;
+      }
+      h1 {
+        font-size: 1.3rem;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>🚗 Vector Car Dodge Deluxe</h1>
-    <button id="playBtn">Play</button>
-    <button id="pauseBtn" style="display:none;">Pause</button>
-    <canvas id="game" width="400" height="600" aria-label="Game canvas"></canvas>
-    <div class="controls" id="mobileControls" style="display:none;">
-      <button class="ctrl-btn" id="leftBtn">⬅</button>
-      <button class="ctrl-btn" id="rightBtn">➡</button>
+  <div class="container">
+    <div class="card">
+      <button class="toggle-theme" title="Toggle light/dark mode" onclick="toggleTheme()">
+        🌙
+      </button>
+      <h1>Modern Centered UI Demo</h1>
+      <form id="mainForm" autocomplete="off">
+        <div class="input-group">
+          <input type="text" id="userInput" placeholder="Type something..." required />
+        </div>
+        <button type="submit">Submit</button>
+      </form>
+      <div class="result" id="result"></div>
     </div>
-    <div class="hint">Arrow keys or touch buttons · Space to pause/resume</div>
   </div>
-<script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const playBtn = document.getElementById('playBtn');
-const pauseBtn = document.getElementById('pauseBtn');
-const leftBtn = document.getElementById('leftBtn');
-const rightBtn = document.getElementById('rightBtn');
-const mobileControls = document.getElementById('mobileControls');
-
-const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
-// DPR scaling; draw in CSS pixels (400x600 logical)
-function fitDPR(){
-  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  canvas.style.width = '100%';
-  canvas.style.height = 'auto';
-  canvas.width = Math.round(400 * dpr);
-  canvas.height = Math.round(600 * dpr);
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-}
-fitDPR();
-addEventListener('resize', fitDPR);
-
-const STATE = { MENU:'menu', PLAYING:'playing', GAMEOVER:'gameover', PAUSED:'paused' };
-let gameState = STATE.MENU;
-
-// Road layout
-const roadMargin = 40;
-const roadEdge = 6;
-const lanes = 3;
-
-// World and timers
-let scroll = 0;
-let player, obstacles, coins, powerups;
-let score, coinCount, fuel;
-let baseSpeed, spawnObsTimer, spawnCoinTimer, spawnPowTimer;
-let keys = {};
-let last = performance.now();
-
-// Powers
-let magnetTimer = 0, boostTimer = 0, invincibleTimer = 0, hasShield = false;
-
-// Input (keyboard)
-document.addEventListener('keydown', e => {
-  keys[e.key] = true;
-  if (e.key === ' ' && (gameState === STATE.PLAYING || gameState === STATE.PAUSED)) togglePause();
-  if (gameState === STATE.GAMEOVER && e.key === ' ') startGame();
-});
-document.addEventListener('keyup', e => { keys[e.key] = false; });
-
-// Input (touch)
-leftBtn.addEventListener('touchstart', e => { e.preventDefault(); keys['ArrowLeft']=true; }, {passive:false});
-leftBtn.addEventListener('touchend',   e => { e.preventDefault(); keys['ArrowLeft']=false; }, {passive:false});
-rightBtn.addEventListener('touchstart',e => { e.preventDefault(); keys['ArrowRight']=true; }, {passive:false});
-rightBtn.addEventListener('touchend',  e => { e.preventDefault(); keys['ArrowRight']=false; }, {passive:false});
-
-// Helpers
-function rand(min,max){ return Math.random()*(max-min)+min; }
-function chance(p){ return Math.random()<p; }
-function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-function roadLeft(){ return roadMargin + roadEdge; }
-function roadRight(){ return canvas.width/(window.devicePixelRatio||1) - roadMargin - roadEdge; }
-function roadWidth(){ return roadRight() - roadLeft(); }
-function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill(); }
-function withGlow(color, blur, drawFn){ ctx.save(); ctx.shadowColor=color; ctx.shadowBlur=blur; drawFn(); ctx.restore(); }
-
-// Init/reset world
-function initGame(){
-  const rl = roadLeft(), rw = roadWidth(), laneW = rw/lanes;
-  player = { w:40, h:70, x: rl + laneW + (laneW-40)/2, y: 600-90, speed: 280, vx:0, trail:[] };
-  obstacles = [];
-  coins = [];
-  powerups = [];
-  score = 0;
-  coinCount = 0;
-  fuel = 100;
-  baseSpeed = 140;
-  spawnObsTimer = 0;
-  spawnCoinTimer = 0;
-  spawnPowTimer = 0;
-  magnetTimer = 0;
-  boostTimer = 0;
-  invincibleTimer = 0;
-  hasShield = false;
-  scroll = 0;
-  last = performance.now();
-}
-function spawnObstacle(){
-  const rl = roadLeft(), rw = roadWidth(), laneW = rw/lanes;
-  const laneIndex = Math.floor(Math.random() * lanes);
-  const type = chance(0.3) ? 'bus' : 'car';
-  const w = (type==='bus') ? 46 : 38;
-  const h = (type==='bus') ? 104 : 66;
-  const x = rl + laneIndex * laneW + (laneW - w)/2;
-  const y = -h - 10;
-  const vy = baseSpeed + rand(20, 60);
-  let vx = 0;
-  if (chance(0.28)) vx = (chance(0.5) ? -1 : 1) * rand(24, 42); // lane drift
-  obstacles.push({x,y,w,h,vy,vx,type});
-}
-
-function spawnCoinLine(){
-  const rl = roadLeft(), rw = roadWidth(), laneW = rw/lanes;
-  const laneIndex = Math.floor(Math.random() * lanes);
-  const startX = rl + laneIndex * laneW + laneW/2;
-  const gap = 28;
-  for (let i=0;i<6;i++){
-    const y = -i*gap - 20;
-    const r = 8;
-    const vy = baseSpeed * 0.8 + rand(10,40);
-    coins.push({x:startX, y, r, vy, vx:0});
-  }
-}
-
-function spawnPowerup(){
-  const rl = roadLeft(), rw = roadWidth();
-  const x = rl + rand(18, rw-18);
-  const y = -24;
-  const kind = ['magnet','boost','shield'][Math.floor(Math.random()*3)];
-  const vy = baseSpeed * 0.9 + rand(10,40);
-  powerups.push({x,y,w:24,h:24,vy,kind});
-}
-function update(dt){
-  const speedFactor = boostTimer>0 ? 1.6 : 1.0;
-  const rl = roadLeft(), rr = roadRight();
-
-  // Player movement
-  player.vx = 0;
-  if (keys['ArrowLeft'])  player.vx -= player.speed;
-  if (keys['ArrowRight']) player.vx += player.speed;
-  player.x += player.vx * dt;
-  player.x = clamp(player.x, rl, rr - player.w);
-
-  // Scroll road
-  scroll += baseSpeed * speedFactor * 0.6 * dt;
-  const pattern = 50; if (scroll > pattern) scroll -= pattern;
-
-  // Obstacles
-  for (const o of obstacles){
-    o.y += o.vy * speedFactor * dt;
-    o.x += o.vx * dt;
-    if (o.x < rl){ o.x = rl; o.vx *= -1; }
-    if (o.x + o.w > rr){ o.x = rr - o.w; o.vx *= -1; }
-  }
-  obstacles = obstacles.filter(o => o.y < 600 + 120);
-
-  // Coins (with magnet attraction)
-  const pcx = player.x + player.w/2, pcy = player.y + player.h/2;
-  for (const c of coins){
-    c.y += (c.vy * speedFactor) * dt;
-    if (magnetTimer > 0){
-      const dx = pcx - c.x, dy = pcy - c.y;
-      const dist = Math.hypot(dx,dy) || 1;
-      const pull = clamp(260 / dist, 0.6, 6.5);
-      c.vx = dx * pull; c.x += c.vx * dt;
-      c.y += dy * pull * dt;
+  <script>
+    // Light/Dark mode toggle logic
+    function toggleTheme() {
+      const body = document.body;
+      body.classList.toggle('dark');
+      // Change icon
+      document.querySelector('.toggle-theme').textContent = body.classList.contains('dark') ? '☀️' : '🌙';
+      localStorage.setItem('theme', body.classList.contains('dark') ? 'dark' : 'light');
     }
-  }
-  coins = coins.filter(c => c.y < 600 + 60);
-
-  // Powerups
-  for (const p of powerups){ p.y += (p.vy * speedFactor) * dt; }
-  powerups = powerups.filter(p => p.y < 600 + 60);
-
-  // Collisions: obstacles
-  if (invincibleTimer > 0) invincibleTimer -= dt;
-  let hit = false;
-  for (const o of obstacles){
-    if (o.x < player.x + player.w && o.x + o.w > player.x &&
-        o.y < player.y + player.h && o.y + o.h > player.y){ hit = true; break; }
-  }
-  if (hit){
-    if (invincibleTimer <= 0){
-      if (hasShield){
-        hasShield = false;
-        invincibleTimer = 1.0; // blink grace
+    // On load, set theme from localStorage
+    window.onload = function() {
+      if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('dark');
+        document.querySelector('.toggle-theme').textContent = '☀️';
+      }
+    };
+    // Simple form submission logic
+    document.getElementById('mainForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const input = document.getElementById('userInput').value.trim();
+      if (input) {
+        document.getElementById('result').textContent = "You typed: " + input;
+        document.getElementById('mainForm').reset();
       } else {
-        gameState = STATE.GAMEOVER;
-        playBtn.style.display = 'inline-block';
-        playBtn.textContent = 'Play Again';
-        if (isTouch) mobileControls.style.display = 'flex';
+        document.getElementById('result').textContent = "Please enter something!";
       }
-    }
-  }
-
-  // Collisions: coins
-  for (let i=coins.length-1;i>=0;i--){
-    const c = coins[i];
-    const nx = clamp(c.x, player.x, player.x + player.w);
-    const ny = clamp(c.y, player.y, player.y + player.h);
-    const dx = c.x - nx, dy = c.y - ny;
-    if (dx*dx + dy*dy < c.r*c.r){
-      coins.splice(i,1);
-      coinCount += 1;
-      score += 5;
-      fuel = clamp(fuel + 2, 0, 100); // coin adds small fuel
-    }
-  }
-
-  // Collisions: powerups
-  for (let i=powerups.length-1;i>=0;i--){
-    const p = powerups[i];
-    if (p.x < player.x + player.w && p.x + p.w > player.x &&
-        p.y < player.y + player.h && p.y + p.h > player.y){
-      powerups.splice(i,1);
-      if (p.kind==='magnet') magnetTimer = 7.0;
-      if (p.kind==='boost')  boostTimer = 4.0;
-      if (p.kind==='shield'){ hasShield = true; invincibleTimer = Math.max(invincibleTimer, 0.15); }
-    }
-  }
-
-  // Timers & difficulty
-  if (magnetTimer>0) magnetTimer -= dt;
-  if (boostTimer>0)  boostTimer -= dt;
-  score += dt * 60;
-  baseSpeed += dt * 2;
-
-  // Fuel drain and end on empty
-  fuel -= dt * 2;
-  if (fuel <= 0){
-    fuel = 0;
-    gameState = STATE.GAMEOVER;
-    playBtn.style.display = 'inline-block';
-    playBtn.textContent = 'Play Again';
-    if (isTouch) mobileControls.style.display = 'flex';
-  }
-
-  // Spawning cadence
-  spawnObsTimer += dt;
-  spawnCoinTimer += dt;
-  spawnPowTimer += dt;
-  if (spawnObsTimer > 1.0){ spawnObsTimer = 0; spawnObstacle(); }
-  if (spawnCoinTimer > 1.5){ spawnCoinTimer = 0; if (chance(0.7)) spawnCoinLine(); }
-  if (spawnPowTimer > 5.0){  spawnPowTimer  = 0; if (chance(0.8)) spawnPowerup(); }
-
-  // Boost trail samples
-  player.trail.push({x:player.x, y:player.y, w:player.w, h:player.h, t:0.35});
-  if (player.trail.length>12) player.trail.shift();
-  for (const t of player.trail) t.t -= dt;
-}
-function drawRoad(){
-  const grad = ctx.createLinearGradient(0,0,0,600);
-  grad.addColorStop(0, getVar('--road-top','#2d2d2d'));
-  grad.addColorStop(1, getVar('--road-bottom','#1f1f1f'));
-  ctx.fillStyle = grad;
-  ctx.fillRect(0,0,400,600);
-
-  ctx.fillStyle = getVar('--edge','#555');
-  ctx.fillRect(roadMargin,0,roadEdge,600);
-  ctx.fillRect(400 - roadMargin - roadEdge,0,roadEdge,600);
-
-  const rl = roadLeft(), rr = roadRight(), rw = rr-rl, laneW = rw/lanes;
-  ctx.fillStyle = getVar('--lane','#dcdcdc');
-  const dashH = 30, gap = 20;
-  for (let i=1;i<lanes;i++){
-    const x = rl + i*laneW;
-    for (let y=-dashH;y<600+dashH;y+=dashH+gap){
-      ctx.fillRect(x-2, y + (scroll % (dashH+gap)), 4, dashH);
-    }
-  }
-}
-
-function drawVehicle(v){
-  ctx.save();
-  const g = ctx.createLinearGradient(v.x, v.y, v.x, v.y+v.h);
-  if (v.type==='bus'){ g.addColorStop(0,getVar('--bus-top','#f7d94c')); g.addColorStop(1,getVar('--bus-bottom','#d4a017')); }
-  else { g.addColorStop(0,getVar('--car1-top','#4da3ff')); g.addColorStop(1,getVar('--car1-bottom','#1f5fa3')); }
-  ctx.fillStyle = g;
-  ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
-  roundRect(v.x, v.y, v.w, v.h, 6); ctx.stroke();
-
-  ctx.fillStyle = 'rgba(255,255,255,0.22)';
-  ctx.fillRect(v.x+5, v.y+8, v.w-10, 14);
-  ctx.fillRect(v.x+5, v.y+v.h-22, v.w-10, 14);
-
-  // Blinking turn indicators for drifting cars
-  if (Math.abs(v.vx) > 0.1){
-    const blink = Math.floor(performance.now()/250)%2===0;
-    if (blink){
-      ctx.fillStyle = 'orange';
-      const s=8;
-      if (v.vx>0){
-        ctx.beginPath(); ctx.moveTo(v.x+v.w, v.y+v.h/2 - s);
-        ctx.lineTo(v.x+v.w+s, v.y+v.h/2);
-        ctx.lineTo(v.x+v.w, v.y+v.h/2 + s);
-        ctx.closePath(); ctx.fill();
-      }else{
-        ctx.beginPath(); ctx.moveTo(v.x, v.y+v.h/2 - s);
-        ctx.lineTo(v.x-s, v.y+v.h/2);
-        ctx.lineTo(v.x, v.y+v.h/2 + s);
-        ctx.closePath(); ctx.fill();
-      }
-    }
-  }
-  ctx.restore();
-}
-function drawPlayer(){
-  // Boost trail
-  if (boostTimer>0){
-    for (const t of player.trail){
-      if (t.t<=0) continue;
-      const a = Math.max(0, Math.min(0.28, t.t*0.45));
-      ctx.fillStyle = `rgba(102,224,255,${a})`;
-      roundRect(t.x, t.y+6, t.w, t.h-12, 10);
-    }
-  }
-  // Body
-  ctx.fillStyle = getVar('--player','#e74c3c');
-  ctx.strokeStyle = '#221c1c'; ctx.lineWidth = 2;
-  roundRect(player.x, player.y, player.w, player.h, 8); ctx.stroke();
-  // Windshield
-  ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.fillRect(player.x+5, player.y+8, player.w-10, 14);
-  // Brake lights when not steering
-  if (!keys['ArrowLeft'] && !keys['ArrowRight']){
-    withGlow('rgba(255,70,70,0.6)', 8, ()=>{
-      ctx.fillStyle = 'rgba(255,70,70,0.9)';
-      ctx.fillRect(player.x+6, player.y+player.h-10, 8, 6);
-      ctx.fillRect(player.x+player.w-14, player.y+player.h-10, 8, 6);
     });
-  }
-  // Magnet aura
-  if (magnetTimer>0){
-    const alpha = 0.25 + 0.15*Math.sin(performance.now()/200);
-    withGlow('rgba(255,107,107,0.6)', 14, ()=>{
-      ctx.strokeStyle = `rgba(255,107,107,${alpha})`;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.ellipse(player.x+player.w/2, player.y+player.h/2, 70, 70, 0, 0, Math.PI*2);
-      ctx.stroke();
-    });
-  }
-  // Shield ring or invincible blink
-  if (hasShield || invincibleTimer>0){
-    const blink = invincibleTimer>0 ? Math.floor(performance.now()/120)%2===0 : true;
-    if (blink){
-      withGlow('rgba(141,245,141,0.7)', 10, ()=>{
-        ctx.strokeStyle = 'rgba(141,245,141,0.9)';
-        ctx.lineWidth = 3;
-        roundRect(player.x-6, player.y-6, player.w+12, player.h+12, 10);
-        ctx.stroke();
-      });
-    }
-  }
-}
-
-function drawCoin(c){
-  withGlow('rgba(255,210,77,0.8)', 14, ()=>{
-    ctx.fillStyle = getVar('--coin','#ffd24d');
-    ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.beginPath(); ctx.arc(c.x-3, c.y-3, c.r*0.55, 0, Math.PI*2); ctx.fill();
-  });
-}
-
-function drawPowerup(p){
-  ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  roundRect(p.x, p.y, p.w, p.h, 6);
-  if (p.kind==='magnet'){
-    ctx.fillStyle = getVar('--magnet','#ff6b6b');
-    ctx.fillRect(p.x+5, p.y+5, 6, p.h-10);
-    ctx.fillRect(p.x+p.w-11, p.y+5, 6, p.h-10);
-    ctx.fillRect(p.x+5, p.y+5, p.w-10, 8);
-  } else if (p.kind==='boost'){
-    ctx.fillStyle = getVar('--boost','#66e0ff');
-    ctx.beginPath();
-    ctx.moveTo(p.x+p.w/2-4, p.y+4);
-    ctx.lineTo(p.x+p.w/2+2, p.y+4);
-    ctx.lineTo(p.x+p.w/2-2, p.y+p.h-4);
-    ctx.lineTo(p.x+p.w/2+4, p.y+p.h-4);
-    ctx.closePath(); ctx.fill();
-  } else {
-    ctx.strokeStyle = getVar('--shield','#8df58d'); ctx.lineWidth = 3;
-    ctx.beginPath();
-    const cx=p.x+p.w/2, cy=p.y+6;
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx+p.w/2-4, cy+6);
-    ctx.lineTo(cx, p.y+p.h-6);
-    ctx.lineTo(cx-(p.w/2-4), cy+6);
-    ctx.closePath(); ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawHUD(){
-  ctx.fillStyle = '#fff'; ctx.font = '16px system-ui, sans-serif'; ctx.textAlign = 'left';
-  ctx.fillText(`Score: ${Math.floor(score)}`, 10, 22);
-  ctx.fillText(`Coins: ${coinCount}`, 10, 42);
-
-  // Fuel bar (0–100)
-  ctx.fillStyle = '#444';
-  ctx.fillRect(10, 54, 100, 10);
-  ctx.fillStyle = fuel>30 ? '#0f0' : '#f00';
-  ctx.fillRect(10, 54, fuel, 10);
-  ctx.strokeStyle = '#fff'; ctx.strokeRect(10, 54, 100, 10);
-
-  // Power timers
-  ctx.textAlign = 'right';
-  if (magnetTimer>0) ctx.fillText(`Magnet: ${Math.ceil(magnetTimer)}s`, 390, 22);
-  if (boostTimer>0)  ctx.fillText(`Boost: ${Math.ceil(boostTimer)}s`, 390, 42);
-  if (hasShield)     ctx.fillText(`Shield`, 390, 62);
-}
-
-function getVar(name, fallback){
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return v || fallback;
-}
-function drawMenu(){
-  drawRoad();
-  ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-  ctx.font = 'bold 24px system-ui, sans-serif';
-  ctx.fillText('Vector Car Dodge Deluxe', 200, 260);
-  ctx.font = '14px system-ui, sans-serif';
-  ctx.fillText('Press Play to start', 200, 288);
-  ctx.fillText('Collect coin lines · Use Magnet, Boost, Shield', 200, 312);
-}
-
-function drawGameOver(){
-  drawRoad();
-  for (const o of obstacles) drawVehicle(o);
-  for (const c of coins) drawCoin(c);
-  for (const p of powerups) drawPowerup(p);
-  drawPlayer(); drawHUD();
-
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.fillRect(0,0,400,600);
-  ctx.fillStyle = '#ff5252'; ctx.textAlign = 'center';
-  ctx.font = 'bold 28px system-ui, sans-serif';
-  ctx.fillText('GAME OVER', 200, 270);
-  ctx.fillStyle = '#fff'; ctx.font = '16px system-ui, sans-serif';
-  ctx.fillText(`Score: ${Math.floor(score)}   Coins: ${coinCount}`, 200, 298);
-  ctx.fillText('Press Play or Space to restart', 200, 322);
-}
-
-function drawPaused(){
-  drawRoad();
-  for (const o of obstacles) drawVehicle(o);
-  for (const c of coins) drawCoin(c);
-  for (const p of powerups) drawPowerup(p);
-  drawPlayer(); drawHUD();
-
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.fillRect(0,0,400,600);
-  ctx.fillStyle = '#ffbb33'; ctx.textAlign = 'center';
-  ctx.font = 'bold 26px system-ui, sans-serif';
-  ctx.fillText('PAUSED', 200, 290);
-  ctx.fillStyle = '#fff'; ctx.font = '14px system-ui, sans-serif';
-  ctx.fillText('Press Space or Pause button to resume', 200, 314);
-}
-
-function loop(now){
-  const dt = Math.min((now - last)/1000, 0.033);
-  last = now;
-
-  ctx.clearRect(0,0,400,600);
-
-  if (gameState===STATE.MENU){
-    drawMenu();
-  } else if (gameState===STATE.PLAYING){
-    drawRoad();
-    update(dt);
-    for (const o of obstacles) drawVehicle(o);
-    for (const c of coins) drawCoin(c);
-    for (const p of powerups) drawPowerup(p);
-    drawPlayer(); drawHUD();
-  } else if (gameState===STATE.PAUSED){
-    drawPaused();
-  } else if (gameState===STATE.GAMEOVER){
-    drawGameOver();
-  }
-
-  requestAnimationFrame(loop);
-}
-
-function startGame(){
-  initGame();
-  gameState = STATE.PLAYING;
-  playBtn.style.display = 'none';
-  pauseBtn.style.display = 'inline-block';
-  if (isTouch) mobileControls.style.display = 'flex';
-}
-
-function togglePause(){
-  if (gameState === STATE.PLAYING){
-    gameState = STATE.PAUSED;
-    pauseBtn.textContent = 'Resume';
-  } else if (gameState === STATE.PAUSED){
-    gameState = STATE.PLAYING;
-    pauseBtn.textContent = 'Pause';
-  }
-}
-
-playBtn.addEventListener('click', startGame);
-pauseBtn.addEventListener('click', togglePause);
-// Start in menu
-initGame();
-gameState = STATE.MENU;
-playBtn.style.display = 'inline-block';
-pauseBtn.style.display = 'none';
-if (isTouch) mobileControls.style.display = 'flex';
-
-// Kick off the loop
-requestAnimationFrame(loop);
-</script>
+  </script>
 </body>
 </html>
