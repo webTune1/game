@@ -34,3 +34,10 @@ const CAR_MODELS = [
       // Stripe
       ctx.save();
       ctx.globalAlpha = 0
+
+      // ... your existing CAR_MODELS array ...
+
+window.CAR_MODELS = {
+  player: CAR_MODELS[0],         // The first car is always the player's car
+  obstacles: CAR_MODELS.slice(1) // All others are obstacles/enemy cars
+};
