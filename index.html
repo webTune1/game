@@ -1,1 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Car Game</title>
+  <style>
+    body { margin: 0; background: #222; }
+    canvas { display: block; margin: auto; background: #444; }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let car = { x: 180, y: 500, width: 40, height: 80, speed: 5 };
+let obstacles = [];
+let obstacleSpeed = 2;
+let keys = {};
+
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+function spawnObstacle() {
+  let x = Math.random() * (canvas.width - 40);
+  obstacles.push({ x: x, y: -80, width: 40, height: 80 });
+}
+
+function update() {
+  // Move car
+  if (keys["ArrowLeft"] && car.x > 0) car.x -= car.speed;
+  if (keys["ArrowRight"] && car.x < canvas.width - car.width) car.x += car.speed;
+
+  // Move obstacles
+  for (let o of obstacles) {
+    o.y += obstacleSpeed;
+    // Collision detection
+    if (o.x < car.x + car.width &&
+        o.x + o.width > car.x &&
+        o.y < car.y + car.height &&
+        o.y + o.height > car.y) {
+      alert("Game Over!");
+      document.location.reload();
+    }
+  }
+
+  // Remove off-screen obstacles
+  obstacles = obstacles.filter(o => o.y < canvas.height);
+
+  // Increase speed over time
+  obstacleSpeed += 0.001;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw car
+  ctx.fillStyle = "red";
+  ctx.fillRect(car.x, car.y, car.width, car.height);
+
+  // Draw obstacles
+  ctx.fillStyle = "blue";
+  for (let o of obstacles) {
+    ctx.fillRect(o.x, o.y, o.width, o.height);
+  }
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// Spawn obstacles every 1.5 seconds
+setInterval(spawnObstacle, 1500);
+
+gameLoop();
+</script>
+</body>
+</html>
 
