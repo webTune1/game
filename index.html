@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Vector Car Dodge Deluxe</title>
+<title>Vector Car Dodge with Fuel & Pause</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   :root{
@@ -19,11 +19,12 @@
   }
   h1{margin:10px 0;color:var(--accent);font-size:clamp(18px,4vw,24px)}
   .wrap{max-width:480px;margin:0 auto;padding:10px}
-  #playBtn{
-    padding:10px 20px;font-size:16px;background:#28a745;color:#fff;border:none;border-radius:8px;cursor:pointer;
+  #playBtn,#pauseBtn{
+    padding:10px 20px;font-size:16px;background:#28a745;color:#fff;
+    border:none;border-radius:8px;cursor:pointer;margin:4px;
     box-shadow:0 6px 20px rgba(0,0,0,.4);
   }
-  #playBtn:hover{background:#218838}
+  #playBtn:hover,#pauseBtn:hover{background:#218838}
   canvas{
     display:block;margin:12px auto;border-radius:14px;background:#222;
     box-shadow:0 18px 60px rgba(0,0,0,.55);
@@ -33,8 +34,7 @@
   .ctrl-btn{
     background:#444;color:white;font-size:24px;
     padding:12px 20px;border:none;border-radius:8px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.4);
-    user-select:none;
+    box-shadow:0 4px 12px rgba(0,0,0,0.4);user-select:none;
   }
   .ctrl-btn:active{background:#666}
   .hint{font-size:12px;opacity:.8;margin-top:6px}
@@ -44,66 +44,65 @@
   <div class="wrap">
     <h1>🚗 Vector Car Dodge Deluxe</h1>
     <button id="playBtn">Play</button>
+    <button id="pauseBtn" style="display:none;">Pause</button>
     <canvas id="game" width="400" height="600" aria-label="Game canvas"></canvas>
     <div class="controls" id="mobileControls" style="display:none;">
       <button class="ctrl-btn" id="leftBtn">⬅</button>
       <button class="ctrl-btn" id="rightBtn">➡</button>
     </div>
-    <div class="hint">Move with Arrow Left/Right or touch buttons · Shield lets you survive one crash</div>
+    <div class="hint">Arrow keys or touch buttons · Space to pause/resume</div>
   </div>
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const playBtn = document.getElementById('playBtn');
+const pauseBtn = document.getElementById('pauseBtn');
 const leftBtn = document.getElementById('leftBtn');
 const rightBtn = document.getElementById('rightBtn');
 const mobileControls = document.getElementById('mobileControls');
 
 const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
-// DPR scaling while preserving 400x600 logical size
+// DPR scaling; draw in CSS pixels (400x600 logical)
 function fitDPR(){
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  const w = 400, h = 600;
-  // Canvas scales to container width (responsive)
   canvas.style.width = '100%';
   canvas.style.height = 'auto';
-  // Set actual pixels for crispness
-  canvas.width = Math.round(w * dpr);
-  canvas.height = Math.round(h * dpr);
-  // Draw using CSS pixels
+  canvas.width = Math.round(400 * dpr);
+  canvas.height = Math.round(600 * dpr);
   ctx.setTransform(dpr,0,0,dpr,0,0);
 }
 fitDPR();
 addEventListener('resize', fitDPR);
 
-const STATE = { MENU:'menu', PLAYING:'playing', GAMEOVER:'gameover' };
+const STATE = { MENU:'menu', PLAYING:'playing', GAMEOVER:'gameover', PAUSED:'paused' };
 let gameState = STATE.MENU;
 
-// Road config
+// Road layout
 const roadMargin = 40;
 const roadEdge = 6;
 const lanes = 3;
-let scroll = 0;
 
-// World
+// World and timers
+let scroll = 0;
 let player, obstacles, coins, powerups;
-let score, coinCount;
+let score, coinCount, fuel;
 let baseSpeed, spawnObsTimer, spawnCoinTimer, spawnPowTimer;
 let keys = {};
 let last = performance.now();
 
-// Power states
+// Powers
 let magnetTimer = 0, boostTimer = 0, invincibleTimer = 0, hasShield = false;
 
-// Input
+// Input (keyboard)
 document.addEventListener('keydown', e => {
   keys[e.key] = true;
+  if (e.key === ' ' && (gameState === STATE.PLAYING || gameState === STATE.PAUSED)) togglePause();
   if (gameState === STATE.GAMEOVER && e.key === ' ') startGame();
 });
 document.addEventListener('keyup', e => { keys[e.key] = false; });
 
-// Mobile buttons
+// Input (touch)
 leftBtn.addEventListener('touchstart', e => { e.preventDefault(); keys['ArrowLeft']=true; }, {passive:false});
 leftBtn.addEventListener('touchend',   e => { e.preventDefault(); keys['ArrowLeft']=false; }, {passive:false});
 rightBtn.addEventListener('touchstart',e => { e.preventDefault(); keys['ArrowRight']=true; }, {passive:false});
@@ -116,29 +115,21 @@ function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 function roadLeft(){ return roadMargin + roadEdge; }
 function roadRight(){ return canvas.width/(window.devicePixelRatio||1) - roadMargin - roadEdge; }
 function roadWidth(){ return roadRight() - roadLeft(); }
-function roundRect(x,y,w,h,r){
-  ctx.beginPath(); ctx.moveTo(x+r,y);
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y);
   ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r);
-  ctx.closePath(); ctx.fill();
-}
-function withGlow(color, blur, drawFn){
-  ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = blur; drawFn(); ctx.restore();
-}
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill(); }
+function withGlow(color, blur, drawFn){ ctx.save(); ctx.shadowColor=color; ctx.shadowBlur=blur; drawFn(); ctx.restore(); }
 
-// Init/reset
+// Init/reset world
 function initGame(){
   const rl = roadLeft(), rw = roadWidth(), laneW = rw/lanes;
-  player = {
-    w:40, h:70,
-    x: rl + 1*laneW + (laneW-40)/2, // exact middle lane
-    y: 600-90, speed: 280, vx:0, trail:[]
-  };
+  player = { w:40, h:70, x: rl + laneW + (laneW-40)/2, y: 600-90, speed: 280, vx:0, trail:[] };
   obstacles = [];
   coins = [];
   powerups = [];
   score = 0;
   coinCount = 0;
+  fuel = 100;
   baseSpeed = 140;
   spawnObsTimer = 0;
   spawnCoinTimer = 0;
@@ -152,25 +143,29 @@ function initGame(){
 }
 function spawnObstacle(){
   const rl = roadLeft(), rw = roadWidth(), laneW = rw/lanes;
-  const laneIndex = Math.floor(Math.random()*lanes);
-  const type = chance(0.3)?'bus':'car';
-  const w = type==='bus'? 46: 38;
-  const h = type==='bus'? 104: 66;
-  const x = rl + laneIndex*laneW + (laneW - w)/2;
+  const laneIndex = Math.floor(Math.random() * lanes);
+  const type = chance(0.3) ? 'bus' : 'car';
+  const w = (type==='bus') ? 46 : 38;
+  const h = (type==='bus') ? 104 : 66;
+  const x = rl + laneIndex * laneW + (laneW - w)/2;
   const y = -h - 10;
   const vy = baseSpeed + rand(20, 60);
   let vx = 0;
-  if (chance(0.28)) vx = (chance(0.5)?-1:1) * rand(24, 42); // lane drift
+  if (chance(0.28)) vx = (chance(0.5) ? -1 : 1) * rand(24, 42); // lane drift
   obstacles.push({x,y,w,h,vy,vx,type});
 }
 
-function spawnCoin(){
-  const rl = roadLeft(), rw = roadWidth();
-  const x = rl + rand(10, rw-10);
-  const y = -20;
-  const r = 8;
-  const vy = baseSpeed * 0.8 + rand(10,40);
-  coins.push({x,y,r,vy,vx:0});
+function spawnCoinLine(){
+  const rl = roadLeft(), rw = roadWidth(), laneW = rw/lanes;
+  const laneIndex = Math.floor(Math.random() * lanes);
+  const startX = rl + laneIndex * laneW + laneW/2;
+  const gap = 28;
+  for (let i=0;i<6;i++){
+    const y = -i*gap - 20;
+    const r = 8;
+    const vy = baseSpeed * 0.8 + rand(10,40);
+    coins.push({x:startX, y, r, vy, vx:0});
+  }
 }
 
 function spawnPowerup(){
@@ -181,19 +176,18 @@ function spawnPowerup(){
   const vy = baseSpeed * 0.9 + rand(10,40);
   powerups.push({x,y,w:24,h:24,vy,kind});
 }
-
 function update(dt){
   const speedFactor = boostTimer>0 ? 1.6 : 1.0;
   const rl = roadLeft(), rr = roadRight();
 
-  // Player input
+  // Player movement
   player.vx = 0;
   if (keys['ArrowLeft'])  player.vx -= player.speed;
   if (keys['ArrowRight']) player.vx += player.speed;
   player.x += player.vx * dt;
   player.x = clamp(player.x, rl, rr - player.w);
 
-  // Scroll
+  // Scroll road
   scroll += baseSpeed * speedFactor * 0.6 * dt;
   const pattern = 50; if (scroll > pattern) scroll -= pattern;
 
@@ -206,7 +200,7 @@ function update(dt){
   }
   obstacles = obstacles.filter(o => o.y < 600 + 120);
 
-  // Coins + magnet attraction
+  // Coins (with magnet attraction)
   const pcx = player.x + player.w/2, pcy = player.y + player.h/2;
   for (const c of coins){
     c.y += (c.vy * speedFactor) * dt;
@@ -229,15 +223,13 @@ function update(dt){
   let hit = false;
   for (const o of obstacles){
     if (o.x < player.x + player.w && o.x + o.w > player.x &&
-        o.y < player.y + player.h && o.y + o.h > player.y){
-      hit = true; break;
-    }
+        o.y < player.y + player.h && o.y + o.h > player.y){ hit = true; break; }
   }
   if (hit){
     if (invincibleTimer <= 0){
       if (hasShield){
         hasShield = false;
-        invincibleTimer = 1.0; // blink for a second
+        invincibleTimer = 1.0; // blink grace
       } else {
         gameState = STATE.GAMEOVER;
         playBtn.style.display = 'inline-block';
@@ -247,7 +239,7 @@ function update(dt){
     }
   }
 
-  // Collisions: coins (circle vs AABB)
+  // Collisions: coins
   for (let i=coins.length-1;i>=0;i--){
     const c = coins[i];
     const nx = clamp(c.x, player.x, player.x + player.w);
@@ -257,6 +249,7 @@ function update(dt){
       coins.splice(i,1);
       coinCount += 1;
       score += 5;
+      fuel = clamp(fuel + 2, 0, 100); // coin adds small fuel
     }
   }
 
@@ -272,39 +265,46 @@ function update(dt){
     }
   }
 
-  // Timers and difficulty
+  // Timers & difficulty
   if (magnetTimer>0) magnetTimer -= dt;
   if (boostTimer>0)  boostTimer -= dt;
   score += dt * 60;
   baseSpeed += dt * 2;
 
-  // Spawning (more coins)
+  // Fuel drain and end on empty
+  fuel -= dt * 2;
+  if (fuel <= 0){
+    fuel = 0;
+    gameState = STATE.GAMEOVER;
+    playBtn.style.display = 'inline-block';
+    playBtn.textContent = 'Play Again';
+    if (isTouch) mobileControls.style.display = 'flex';
+  }
+
+  // Spawning cadence
   spawnObsTimer += dt;
   spawnCoinTimer += dt;
   spawnPowTimer += dt;
   if (spawnObsTimer > 1.0){ spawnObsTimer = 0; spawnObstacle(); }
-  if (spawnCoinTimer > 0.55){ spawnCoinTimer = 0; if (chance(0.9)) spawnCoin(); } // more coins
-  if (spawnPowTimer > 4.5){ spawnPowTimer = 0; if (chance(0.8)) spawnPowerup(); }
+  if (spawnCoinTimer > 1.5){ spawnCoinTimer = 0; if (chance(0.7)) spawnCoinLine(); }
+  if (spawnPowTimer > 5.0){  spawnPowTimer  = 0; if (chance(0.8)) spawnPowerup(); }
 
-  // Boost trail entries
+  // Boost trail samples
   player.trail.push({x:player.x, y:player.y, w:player.w, h:player.h, t:0.35});
   if (player.trail.length>12) player.trail.shift();
   for (const t of player.trail) t.t -= dt;
 }
 function drawRoad(){
-  // Road gradient
   const grad = ctx.createLinearGradient(0,0,0,600);
   grad.addColorStop(0, getVar('--road-top','#2d2d2d'));
   grad.addColorStop(1, getVar('--road-bottom','#1f1f1f'));
   ctx.fillStyle = grad;
   ctx.fillRect(0,0,400,600);
 
-  // Edges
   ctx.fillStyle = getVar('--edge','#555');
   ctx.fillRect(roadMargin,0,roadEdge,600);
   ctx.fillRect(400 - roadMargin - roadEdge,0,roadEdge,600);
 
-  // Lane dashes
   const rl = roadLeft(), rr = roadRight(), rw = rr-rl, laneW = rw/lanes;
   ctx.fillStyle = getVar('--lane','#dcdcdc');
   const dashH = 30, gap = 20;
@@ -318,7 +318,6 @@ function drawRoad(){
 
 function drawVehicle(v){
   ctx.save();
-  // Body gradient
   const g = ctx.createLinearGradient(v.x, v.y, v.x, v.y+v.h);
   if (v.type==='bus'){ g.addColorStop(0,getVar('--bus-top','#f7d94c')); g.addColorStop(1,getVar('--bus-bottom','#d4a017')); }
   else { g.addColorStop(0,getVar('--car1-top','#4da3ff')); g.addColorStop(1,getVar('--car1-bottom','#1f5fa3')); }
@@ -326,26 +325,23 @@ function drawVehicle(v){
   ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
   roundRect(v.x, v.y, v.w, v.h, 6); ctx.stroke();
 
-  // Windows
   ctx.fillStyle = 'rgba(255,255,255,0.22)';
   ctx.fillRect(v.x+5, v.y+8, v.w-10, 14);
   ctx.fillRect(v.x+5, v.y+v.h-22, v.w-10, 14);
 
-  // Blinking turn indicators for drifting vehicles
+  // Blinking turn indicators for drifting cars
   if (Math.abs(v.vx) > 0.1){
     const blink = Math.floor(performance.now()/250)%2===0;
     if (blink){
       ctx.fillStyle = 'orange';
       const s=8;
       if (v.vx>0){
-        ctx.beginPath();
-        ctx.moveTo(v.x+v.w, v.y+v.h/2 - s);
+        ctx.beginPath(); ctx.moveTo(v.x+v.w, v.y+v.h/2 - s);
         ctx.lineTo(v.x+v.w+s, v.y+v.h/2);
         ctx.lineTo(v.x+v.w, v.y+v.h/2 + s);
         ctx.closePath(); ctx.fill();
       }else{
-        ctx.beginPath();
-        ctx.moveTo(v.x, v.y+v.h/2 - s);
+        ctx.beginPath(); ctx.moveTo(v.x, v.y+v.h/2 - s);
         ctx.lineTo(v.x-s, v.y+v.h/2);
         ctx.lineTo(v.x, v.y+v.h/2 + s);
         ctx.closePath(); ctx.fill();
@@ -354,12 +350,11 @@ function drawVehicle(v){
   }
   ctx.restore();
 }
-
 function drawPlayer(){
   // Boost trail
   if (boostTimer>0){
-    for (let i=0;i<player.trail.length;i++){
-      const t = player.trail[i]; if (t.t<=0) continue;
+    for (const t of player.trail){
+      if (t.t<=0) continue;
       const a = Math.max(0, Math.min(0.28, t.t*0.45));
       ctx.fillStyle = `rgba(102,224,255,${a})`;
       roundRect(t.x, t.y+6, t.w, t.h-12, 10);
@@ -391,21 +386,15 @@ function drawPlayer(){
       ctx.stroke();
     });
   }
-  // Shield ring (or invincible blink)
+  // Shield ring or invincible blink
   if (hasShield || invincibleTimer>0){
     const blink = invincibleTimer>0 ? Math.floor(performance.now()/120)%2===0 : true;
     if (blink){
       withGlow('rgba(141,245,141,0.7)', 10, ()=>{
         ctx.strokeStyle = 'rgba(141,245,141,0.9)';
         ctx.lineWidth = 3;
-        if (ctx.roundRect){
-          ctx.beginPath();
-          ctx.roundRect(player.x-6, player.y-6, player.w+12, player.h+12, 10);
-          ctx.stroke();
-        } else {
-          roundRect(player.x-6, player.y-6, player.w+12, player.h+12, 10);
-          ctx.stroke();
-        }
+        roundRect(player.x-6, player.y-6, player.w+12, player.h+12, 10);
+        ctx.stroke();
       });
     }
   }
@@ -415,7 +404,6 @@ function drawCoin(c){
   withGlow('rgba(255,210,77,0.8)', 14, ()=>{
     ctx.fillStyle = getVar('--coin','#ffd24d');
     ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill();
-    // Shine
     ctx.fillStyle = 'rgba(255,255,255,0.25)';
     ctx.beginPath(); ctx.arc(c.x-3, c.y-3, c.r*0.55, 0, Math.PI*2); ctx.fill();
   });
@@ -455,8 +443,17 @@ function drawHUD(){
   ctx.fillStyle = '#fff'; ctx.font = '16px system-ui, sans-serif'; ctx.textAlign = 'left';
   ctx.fillText(`Score: ${Math.floor(score)}`, 10, 22);
   ctx.fillText(`Coins: ${coinCount}`, 10, 42);
+
+  // Fuel bar (0–100)
+  ctx.fillStyle = '#444';
+  ctx.fillRect(10, 54, 100, 10);
+  ctx.fillStyle = fuel>30 ? '#0f0' : '#f00';
+  ctx.fillRect(10, 54, fuel, 10);
+  ctx.strokeStyle = '#fff'; ctx.strokeRect(10, 54, 100, 10);
+
+  // Power timers
   ctx.textAlign = 'right';
-   if (magnetTimer>0) ctx.fillText(`Magnet: ${Math.ceil(magnetTimer)}s`, 390, 22);
+  if (magnetTimer>0) ctx.fillText(`Magnet: ${Math.ceil(magnetTimer)}s`, 390, 22);
   if (boostTimer>0)  ctx.fillText(`Boost: ${Math.ceil(boostTimer)}s`, 390, 42);
   if (hasShield)     ctx.fillText(`Shield`, 390, 62);
 }
@@ -472,7 +469,7 @@ function drawMenu(){
   ctx.fillText('Vector Car Dodge Deluxe', 200, 260);
   ctx.font = '14px system-ui, sans-serif';
   ctx.fillText('Press Play to start', 200, 288);
-  ctx.fillText('Collect coins & power-ups: Magnet, Boost, Shield', 200, 312);
+  ctx.fillText('Collect coin lines · Use Magnet, Boost, Shield', 200, 312);
 }
 
 function drawGameOver(){
@@ -492,9 +489,26 @@ function drawGameOver(){
   ctx.fillText('Press Play or Space to restart', 200, 322);
 }
 
+function drawPaused(){
+  drawRoad();
+  for (const o of obstacles) drawVehicle(o);
+  for (const c of coins) drawCoin(c);
+  for (const p of powerups) drawPowerup(p);
+  drawPlayer(); drawHUD();
+
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(0,0,400,600);
+  ctx.fillStyle = '#ffbb33'; ctx.textAlign = 'center';
+  ctx.font = 'bold 26px system-ui, sans-serif';
+  ctx.fillText('PAUSED', 200, 290);
+  ctx.fillStyle = '#fff'; ctx.font = '14px system-ui, sans-serif';
+  ctx.fillText('Press Space or Pause button to resume', 200, 314);
+}
+
 function loop(now){
   const dt = Math.min((now - last)/1000, 0.033);
   last = now;
+
   ctx.clearRect(0,0,400,600);
 
   if (gameState===STATE.MENU){
@@ -506,9 +520,12 @@ function loop(now){
     for (const c of coins) drawCoin(c);
     for (const p of powerups) drawPowerup(p);
     drawPlayer(); drawHUD();
-  } else {
+  } else if (gameState===STATE.PAUSED){
+    drawPaused();
+  } else if (gameState===STATE.GAMEOVER){
     drawGameOver();
   }
+
   requestAnimationFrame(loop);
 }
 
@@ -516,18 +533,31 @@ function startGame(){
   initGame();
   gameState = STATE.PLAYING;
   playBtn.style.display = 'none';
+  pauseBtn.style.display = 'inline-block';
   if (isTouch) mobileControls.style.display = 'flex';
 }
 
-playBtn.addEventListener('click', startGame);
+function togglePause(){
+  if (gameState === STATE.PLAYING){
+    gameState = STATE.PAUSED;
+    pauseBtn.textContent = 'Resume';
+  } else if (gameState === STATE.PAUSED){
+    gameState = STATE.PLAYING;
+    pauseBtn.textContent = 'Pause';
+  }
+}
 
+playBtn.addEventListener('click', startGame);
+pauseBtn.addEventListener('click', togglePause);
 // Start in menu
 initGame();
 gameState = STATE.MENU;
 playBtn.style.display = 'inline-block';
+pauseBtn.style.display = 'none';
 if (isTouch) mobileControls.style.display = 'flex';
+
+// Kick off the loop
 requestAnimationFrame(loop);
 </script>
 </body>
 </html>
-
