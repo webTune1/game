@@ -2,205 +2,67 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Clean Centered UI Example</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --primary: #4f46e5;
-      --primary-dark: #3730a3;
-      --bg: #f8fafc;
-      --card-bg: #fff;
-      --text: #1e293b;
-      --input-bg: #f1f5f9;
-      --border: #e2e8f0;
-      --shadow: 0 4px 32px 0 rgba(31, 41, 55, 0.07);
-
-      /* Dark mode */
-      --bg-dark: #18181b;
-      --card-bg-dark: #23232a;
-      --text-dark: #f4f4f5;
-      --input-bg-dark: #2c2c36;
-      --border-dark: #32323e;
-    }
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      transition: background 0.3s, color 0.3s;
-    }
-    body.dark {
-      background: var(--bg-dark);
-      color: var(--text-dark);
-    }
-    .container {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .card {
-      background: var(--card-bg);
-      box-shadow: var(--shadow);
-      border-radius: 18px;
-      padding: 2.5rem 2rem;
-      width: 100%;
-      max-width: 400px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      transition: background 0.3s;
-      border: 1px solid var(--border);
-    }
-    body.dark .card {
-      background: var(--card-bg-dark);
-      border-color: var(--border-dark);
-    }
-    h1 {
-      font-size: 2rem;
-      font-weight: 600;
-      margin-bottom: 1.5rem;
-      text-align: center;
-      letter-spacing: -1px;
-    }
-    .input-group {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-    input[type="text"], input[type="email"], input[type="password"] {
-      padding: 0.75rem 1rem;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--input-bg);
-      color: var(--text);
-      font-size: 1rem;
-      outline: none;
-      transition: border-color 0.2s, background 0.2s;
-    }
-    input[type="text"]:focus,
-    input[type="email"]:focus,
-    input[type="password"]:focus {
-      border-color: var(--primary);
-      background: #fff;
-    }
-    body.dark input[type="text"],
-    body.dark input[type="email"],
-    body.dark input[type="password"] {
-      background: var(--input-bg-dark);
-      color: var(--text-dark);
-      border-color: var(--border-dark);
-    }
-    body.dark input[type="text"]:focus,
-    body.dark input[type="email"]:focus,
-    body.dark input[type="password"]:focus {
-      background: #23232a;
-      border-color: var(--primary);
-    }
-    button {
-      padding: 0.75rem 1.5rem;
-      border: none;
-      border-radius: 8px;
-      background: var(--primary);
-      color: #fff;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-      box-shadow: 0 2px 8px 0 rgba(79, 70, 229, 0.10);
-    }
-    button:hover {
-      background: var(--primary-dark);
-      transform: translateY(-2px) scale(1.02);
-    }
-    .toggle-theme {
-      background: none;
-      border: none;
-      color: var(--primary);
-      font-size: 1.2rem;
-      cursor: pointer;
-      margin-bottom: 1.5rem;
-      align-self: flex-end;
-      transition: color 0.2s;
-    }
-    body.dark .toggle-theme {
-      color: #fbbf24;
-    }
-    .result {
-      margin-top: 1rem;
-      padding: 1rem;
-      width: 100%;
-      border-radius: 8px;
-      background: #f3f4f6;
-      color: #23272f;
-      text-align: center;
-      transition: background 0.3s, color 0.3s;
-      font-size: 1.05rem;
-      min-height: 2rem;
-    }
-    body.dark .result {
-      background: #22222b;
-      color: #f4f4f5;
-    }
-    @media (max-width: 600px) {
-      .card {
-        padding: 1.2rem 0.5rem;
-        max-width: 95vw;
-      }
-      h1 {
-        font-size: 1.3rem;
-      }
-    }
-  </style>
+  <title>Vector Car Dodge Deluxe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <button class="toggle-theme" title="Toggle light/dark mode" onclick="toggleTheme()">
-        🌙
-      </button>
-      <h1>Modern Centered UI Demo</h1>
-      <form id="mainForm" autocomplete="off">
-        <div class="input-group">
-          <input type="text" id="userInput" placeholder="Type something..." required />
+  <div class="game-shell">
+    <div class="hud-bar">
+      <div class="hud-item">
+        <span class="hud-icon">🏁</span>
+        <span id="score">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-icon">🪙</span>
+        <span id="coins">0</span>
+      </div>
+      <div class="hud-item fuel">
+        <span class="hud-icon">⛽</span>
+        <div class="fuel-bar"><div id="fuel-bar-inner"></div></div>
+      </div>
+      <div class="hud-item" id="lifeSaverHud" style="display:none;">
+        <span class="hud-icon">🛡️</span>
+        <span id="lifeSaverCount">1</span>
+      </div>
+      <div class="hud-powerups">
+        <span id="magnetPower" class="powerup-hud" hidden>🧲 <span id="magnetTimer">0</span></span>
+        <span id="boostPower" class="powerup-hud" hidden>⚡ <span id="boostTimer">0</span></span>
+      </div>
+    </div>
+    <div class="canvas-container">
+      <canvas id="gameCanvas" width="400" height="600" aria-label="Game canvas"></canvas>
+      <div class="overlay" id="menuOverlay">
+        <div class="overlay-card">
+          <h1>🚗 Vector Car Dodge Deluxe</h1>
+          <p>Collect coins, dodge traffic, and survive as long as you can!</p>
+          <button id="playBtn" class="main-btn">Play</button>
         </div>
-        <button type="submit">Submit</button>
-      </form>
-      <div class="result" id="result"></div>
+      </div>
+      <div class="overlay" id="gameOverOverlay" style="display:none;">
+        <div class="overlay-card">
+          <h2>Game Over</h2>
+          <div id="finalScore"></div>
+          <button id="restartBtn" class="main-btn">Play Again</button>
+        </div>
+      </div>
+      <div class="overlay" id="pauseOverlay" style="display:none;">
+        <div class="overlay-card">
+          <h2>Paused</h2>
+          <p>Tap <b>Space</b> or the button below to resume.</p>
+          <button id="resumeBtn" class="main-btn">Resume</button>
+        </div>
+      </div>
+      <div class="mobile-controls">
+        <button class="ctrl-btn" id="leftBtn">⬅</button>
+        <button class="ctrl-btn" id="pauseBtn">⏸</button>
+        <button class="ctrl-btn" id="rightBtn">➡</button>
+      </div>
+    </div>
+    <div class="hint-bar">
+      <span>← / → or swipe to move · Space/Pause to start/pause</span>
     </div>
   </div>
-  <script>
-    // Light/Dark mode toggle logic
-    function toggleTheme() {
-      const body = document.body;
-      body.classList.toggle('dark');
-      // Change icon
-      document.querySelector('.toggle-theme').textContent = body.classList.contains('dark') ? '☀️' : '🌙';
-      localStorage.setItem('theme', body.classList.contains('dark') ? 'dark' : 'light');
-    }
-    // On load, set theme from localStorage
-    window.onload = function() {
-      if (localStorage.getItem('theme') === 'dark') {
-        document.body.classList.add('dark');
-        document.querySelector('.toggle-theme').textContent = '☀️';
-      }
-    };
-    // Simple form submission logic
-    document.getElementById('mainForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const input = document.getElementById('userInput').value.trim();
-      if (input) {
-        document.getElementById('result').textContent = "You typed: " + input;
-        document.getElementById('mainForm').reset();
-      } else {
-        document.getElementById('result').textContent = "Please enter something!";
-      }
-    });
-  </script>
+  <script src="game.js"></script>
 </body>
 </html>
