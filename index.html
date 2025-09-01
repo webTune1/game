@@ -1,355 +1,282 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Car Dodge Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root {
-      --ui-bg: #111;
-      --canvas-bg: #1e1e1e;
-      --road: #2b2b2b;
-      --lane: #dcdcdc;
-      --edge: #555;
-      --car: #e74c3c;
-      --obstacle: #3498db;
-      --text: #fff;
-      --accent: #ffbb33;
-      --btn: #28a745;
-      --btn-hover: #218838;
-    }
-    html, body {
-      height: 100%;
-      margin: 0;
-      background: linear-gradient(180deg, var(--ui-bg), #000);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: var(--text);
-      display: grid;
-      place-items: center;
-    }
-    .wrap {
-      width: 100%;
-      max-width: 460px;
-      padding: 16px;
-      box-sizing: border-box;
-      text-align: center;
-    }
-    h1 {
-      margin: 0 0 10px;
-      font-weight: 700;
-      letter-spacing: 0.2px;
-      color: var(--accent);
-      font-size: 22px;
-    }
-    .controls {
-      margin-bottom: 10px;
-    }
-    #playBtn {
-      padding: 10px 20px;
-      font-size: 16px;
-      background: var(--btn);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-    }
-    #playBtn:hover { background: var(--btn-hover); }
-    canvas {
-      width: 100%;
-      height: auto;
-      background: var(--canvas-bg);
-      border-radius: 12px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-      display: block;
-      margin: 0 auto;
-    }
-    .hint {
-      margin-top: 8px;
-      font-size: 12px;
-      color: #cfcfcf;
-      opacity: 0.9;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Vector Car Dodge Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    font-family: system-ui, sans-serif;
+    color: white;
+    text-align: center;
+  }
+  h1 {
+    margin: 10px 0;
+    color: #ffbb33;
+  }
+  #playBtn {
+    padding: 10px 20px;
+    font-size: 16px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #playBtn:hover { background: #218838; }
+  canvas {
+    background: #2b2b2b;
+    display: block;
+    margin: 10px auto;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Car Dodge Game</h1>
-    <div class="controls">
-      <button id="playBtn">Play</button>
-    </div>
-    <canvas id="game" width="400" height="600" aria-label="Game canvas"></canvas>
-    <div class="hint">Use Arrow Left / Arrow Right to move. Press Space to restart after crash.</div>
-  </div>
 
-  <script>
-    // Canvas setup
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-    const playBtn = document.getElementById('playBtn');
+<h1>🚗 Vector Car Dodge</h1>
+<button id="playBtn">Play</button>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+<p style="font-size:12px;opacity:0.8;">Arrow keys to move. Avoid traffic!</p>
 
-    // Game state
-    const STATE = { MENU: 'menu', PLAYING: 'playing', GAMEOVER: 'gameover' };
-    let gameState = STATE.MENU;
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const playBtn = document.getElementById("playBtn");
 
-    // World and visuals
-    const road = {
-      margin: 40,             // left/right margin
-      laneWidth: 10,          // lane dash width
-      laneHeight: 30,         // dash height
-      laneGap: 20,            // gap between dashes
-      scroll: 0,              // scroll offset
-      edges: 6                // road edge thickness
-    };
+const STATE = { MENU:0, PLAYING:1, GAMEOVER:2 };
+let gameState = STATE.MENU;
 
-    // Player
-    const player = {
-      x: 0,
-      y: 0,
-      w: 40,
-      h: 70,
-      speed: 280 // px per second
-    };
+let player, obstacles, score, speed, spawnTimer, keys, lastTime;
 
-    // Obstacles
-    let obstacles = [];
-    let baseObstacleSpeed = 140;  // px/s starting
-    let spawnEvery = 1.2;         // seconds
-    let spawnTimer = 0;
+// Road settings
+const roadMargin = 40;
+const roadEdge = 6;
+const lanes = 3;
 
-    // Input
-    const keys = {};
-    document.addEventListener('keydown', e => {
-      keys[e.key] = true;
-      if (gameState === STATE.GAMEOVER && e.key === ' ') {
-        startGame();
-      }
-    });
-    document.addEventListener('keyup', e => { keys[e.key] = false; });
+// Colors
+const colors = {
+  road: "#2b2b2b",
+  edge: "#555",
+  lane: "#dcdcdc",
+  player: "#e74c3c",
+  bus: "#f1c40f",
+  car: "#3498db"
+};
 
-    // Score
-    let score = 0;
+function initGame() {
+  const roadLeft = roadMargin + roadEdge;
+  const roadRight = canvas.width - roadMargin - roadEdge;
+  const roadWidth = roadRight - roadLeft;
+  const laneWidth = roadWidth / lanes;
 
-    // Time
-    let last = performance.now();
+  player = {
+    w: 40, h: 70,
+    x: roadLeft + laneWidth + (laneWidth - 40)/2, // middle lane
+    y: canvas.height - 90,
+    speed: 280
+  };
+  obstacles = [];
+  score = 0;
+  speed = 140;
+  spawnTimer = 0;
+  keys = {};
+  lastTime = performance.now();
+}
 
-    // Start/Reset
-    function startGame() {
-      gameState = STATE.PLAYING;
-      playBtn.style.display = 'none';
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
 
-      // Initialize player at bottom center of road
-      const roadLeft = road.margin + road.edges;
-      const roadRight = canvas.width - road.margin - road.edges;
-      const roadWidth = roadRight - roadLeft;
+function spawnObstacle() {
+  const roadLeft = roadMargin + roadEdge;
+  const roadRight = canvas.width - roadMargin - roadEdge;
+  const roadWidth = roadRight - roadLeft;
+  const laneWidth = roadWidth / lanes;
 
-      player.w = 40;
-      player.h = 70;
-      player.x = roadLeft + (roadWidth - player.w) / 2;
-      player.y = canvas.height - player.h - 20;
+  const laneIndex = Math.floor(Math.random() * lanes);
+  const type = Math.random() < 0.3 ? "bus" : "car";
+  const w = type === "bus" ? 44 : 38;
+  const h = type === "bus" ? 100 : 66;
+  const x = roadLeft + laneIndex * laneWidth + (laneWidth - w)/2;
+  const y = -h - 10;
+  const vy = speed + Math.random() * 40;
 
-      // Reset world
-      obstacles = [];
-      baseObstacleSpeed = 140;
-      spawnEvery = 1.1;
-      spawnTimer = 0;
-      road.scroll = 0;
-      score = 0;
+  // Some vehicles will change lanes
+  let vx = 0;
+  if (Math.random() < 0.25) {
+    vx = (Math.random() < 0.5 ? -1 : 1) * 30; // px/sec sideways
+  }
+
+  obstacles.push({ x, y, w, h, vy, vx, type });
+}
+function update(dt) {
+  // Player movement
+  const roadLeft = roadMargin + roadEdge;
+  const roadRight = canvas.width - roadMargin - roadEdge;
+  if (keys["ArrowLeft"]) player.x -= player.speed * dt;
+  if (keys["ArrowRight"]) player.x += player.speed * dt;
+  if (player.x < roadLeft) player.x = roadLeft;
+  if (player.x + player.w > roadRight) player.x = roadRight - player.w;
+
+  // Obstacles
+  for (let o of obstacles) {
+    o.y += o.vy * dt;
+    o.x += o.vx * dt;
+    // Keep inside road
+    if (o.x < roadLeft) { o.x = roadLeft; o.vx *= -1; }
+    if (o.x + o.w > roadRight) { o.x = roadRight - o.w; o.vx *= -1; }
+  }
+  obstacles = obstacles.filter(o => o.y < canvas.height + 120);
+
+  // Collision
+  for (let o of obstacles) {
+    if (o.x < player.x + player.w &&
+        o.x + o.w > player.x &&
+        o.y < player.y + player.h &&
+        o.y + o.h > player.y) {
+      gameState = STATE.GAMEOVER;
+      playBtn.style.display = "inline-block";
+      playBtn.textContent = "Play Again";
     }
+  }
 
-    // Menu state draw
-    function drawMenu() {
-      drawRoad(0);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 26px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Car Dodge Game', canvas.width/2, canvas.height/2 - 30);
+  // Score & difficulty
+  score += dt * 60;
+  speed += dt * 2;
+  spawnTimer += dt;
+  if (spawnTimer > 1.1) {
+    spawnTimer = 0;
+    spawnObstacle();
+  }
+}
 
-      ctx.font = '14px system-ui, sans-serif';
-      ctx.fillStyle = '#e0e0e0';
-      ctx.fillText('Press Play to start', canvas.width/2, canvas.height/2 + 10);
-      ctx.fillText('Use Arrow Left / Arrow Right to move', canvas.width/2, canvas.height/2 + 35);
+function drawRoad(scroll) {
+  ctx.fillStyle = colors.road;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Edges
+  ctx.fillStyle = colors.edge;
+  ctx.fillRect(roadMargin, 0, roadEdge, canvas.height);
+  ctx.fillRect(canvas.width - roadMargin - roadEdge, 0, roadEdge, canvas.height);
+
+  // Lane dashes
+  const roadLeft = roadMargin + roadEdge;
+  const roadRight = canvas.width - roadMargin - roadEdge;
+  const roadWidth = roadRight - roadLeft;
+  const laneWidth = roadWidth / lanes;
+  ctx.fillStyle = colors.lane;
+  const dashHeight = 30, dashGap = 20;
+  for (let i = 1; i < lanes; i++) {
+    const x = roadLeft + i * laneWidth;
+    for (let y = -dashHeight; y < canvas.height + dashHeight; y += dashHeight + dashGap) {
+      ctx.fillRect(x - 2, y + scroll, 4, dashHeight);
     }
+  }
+}
 
-    // Game over overlay
-    function drawGameOver() {
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#ff5252';
-      ctx.font = 'bold 30px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 10);
+function drawVehicle(v) {
+  ctx.fillStyle = v.type === "bus" ? colors.bus : colors.car;
+  roundRect(v.x, v.y, v.w, v.h, 6);
+  ctx.fillStyle = "rgba(255,255,255,0.2)";
+  ctx.fillRect(v.x + 5, v.y + 8, v.w - 10, 14);
+  ctx.fillRect(v.x + 5, v.y + v.h - 22, v.w - 10, 14);
+}
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '16px system-ui, sans-serif';
-      ctx.fillText(`Score: ${Math.floor(score)}`, canvas.width/2, canvas.height/2 + 18);
-      ctx.fillText('Press Play to try again (or Space)', canvas.width/2, canvas.height/2 + 44);
-    }
+function drawPlayer() {
+  ctx.fillStyle = colors.player;
+  roundRect(player.x, player.y, player.w, player.h, 8);
+  ctx.fillStyle = "rgba(255,255,255,0.2)";
+  ctx.fillRect(player.x + 5, player.y + 8, player.w - 10, 14);
+}
 
-    // Draw road with edges and moving lane dashes
-    function drawRoad(dt) {
-      // Background
-      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--road').trim() || '#2b2b2b';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+  ctx.fill();
+}
 
-      // Road edges
-      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--edge').trim() || '#555';
-      ctx.fillRect(road.margin, 0, road.edges, canvas.height); // left edge
-      ctx.fillRect(canvas.width - road.margin - road.edges, 0, road.edges, canvas.height); // right edge
+function drawHUD() {
+  ctx.fillStyle = "white";
+  ctx.font = "16px sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("Score: " + Math.floor(score), 10, 20);
+}
 
-      // Center lane dashes (scrolling)
-      if (dt) {
-        road.scroll += (baseObstacleSpeed * 0.6) * dt;
-        const patternHeight = road.laneHeight + road.laneGap;
-        if (road.scroll >= patternHeight) road.scroll -= patternHeight;
-      }
+function loop(now) {
+  const dt = Math.min((now - lastTime) / 1000, 0.033);
+  lastTime = now;
 
-      const centerX = canvas.width / 2;
-      const patternHeight = road.laneHeight + road.laneGap;
-      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--lane').trim() || '#dcdcdc';
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      for (let y = -road.laneHeight; y < canvas.height + road.laneHeight; y += patternHeight) {
-        const drawY = y + (road.scroll || 0);
-        ctx.fillRect(centerX - road.laneWidth/2, drawY, road.laneWidth, road.laneHeight);
-      }
-    }
+  if (gameState === STATE.MENU) {
+    drawRoad(0);
+    ctx.fillStyle = "white";
+    ctx.font = "20px sans-serif";
+    ctx.textAlign = "center";
+       ctx.fillText("Press Play to start", canvas.width / 2, canvas.height / 2);
+  } 
+  else if (gameState === STATE.PLAYING) {
+    // Scroll effect for lane dashes
+    const scroll = (now / 10) % 50;
+    drawRoad(scroll);
+    update(dt);
+    for (let o of obstacles) drawVehicle(o);
+    drawPlayer();
+    drawHUD();
+  } 
+  else if (gameState === STATE.GAMEOVER) {
+    const scroll = (now / 10) % 50;
+    drawRoad(scroll);
+    for (let o of obstacles) drawVehicle(o);
+    drawPlayer();
+    drawHUD();
 
-    // Draw player car (rounded rectangle + windshield)
-    function drawPlayer() {
-      roundedRect(player.x, player.y, player.w, player.h, 8, getVar('--car', '#e74c3c'));
-      // windshield highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      ctx.fillRect(player.x + 6, player.y + 10, player.w - 12, 14);
-    }
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw obstacle
-    function drawObstacle(o) {
-      roundedRect(o.x, o.y, o.w, o.h, 6, getVar('--obstacle', '#3498db'));
-    }
+    ctx.fillStyle = "red";
+    ctx.font = "28px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
 
-    // Utility: rounded rect
-    function roundedRect(x, y, w, h, r, color) {
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r);
-      ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r);
-      ctx.closePath();
-      ctx.fill();
-    }
-    function getVar(name, fallback) {
-      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-      return v || fallback;
-    }
+    ctx.fillStyle = "white";
+    ctx.font = "16px sans-serif";
+    ctx.fillText("Score: " + Math.floor(score), canvas.width / 2, canvas.height / 2 + 10);
+    ctx.fillText("Press Play or Space to restart", canvas.width / 2, canvas.height / 2 + 35);
+  }
 
-    // Spawning
-    function trySpawn(dt) {
-      spawnTimer += dt;
-      const roadLeft = road.margin + road.edges;
-      const roadRight = canvas.width - road.margin - road.edges;
-      const roadWidth = roadRight - roadLeft;
+  requestAnimationFrame(loop);
+}
 
-      if (spawnTimer >= spawnEvery) {
-        spawnTimer = 0;
+// Button click starts or restarts the game
+playBtn.addEventListener("click", () => {
+  initGame();
+  gameState = STATE.PLAYING;
+  playBtn.style.display = "none";
+});
 
-        // Spawn in one of three lanes to feel organized
-        const lanes = 3;
-        const laneW = roadWidth / lanes;
-        const laneIndex = Math.floor(Math.random() * lanes);
-        const w = 38, h = 66;
+// Allow Space key to restart after Game Over
+document.addEventListener("keydown", e => {
+  if (gameState === STATE.GAMEOVER && e.key === " ") {
+    initGame();
+    gameState = STATE.PLAYING;
+    playBtn.style.display = "none";
+  }
+});
 
-        const x = roadLeft + laneIndex * laneW + (laneW - w) / 2;
-        const y = -h - 10;
-        const vy = baseObstacleSpeed + Math.random() * 60;
-
-        obstacles.push({ x, y, w, h, vy });
-        // Slightly ramp difficulty
-        if (spawnEvery > 0.65) spawnEvery -= 0.01;
-        baseObstacleSpeed += 1.2;
-      }
-    }
-
-    // Update
-    function update(dt) {
-      // Input
-      const roadLeft = road.margin + road.edges;
-      const roadRight = canvas.width - road.margin - road.edges;
-
-      if (keys['ArrowLeft'])  player.x -= player.speed * dt;
-      if (keys['ArrowRight']) player.x += player.speed * dt;
-
-      // Clamp player inside road
-      if (player.x < roadLeft) player.x = roadLeft;
-      if (player.x + player.w > roadRight) player.x = roadRight - player.w;
-
-      // Obstacles movement
-      obstacles.forEach(o => { o.y += o.vy * dt; });
-      // Remove off-screen
-      obstacles = obstacles.filter(o => o.y < canvas.height + 80);
-
-      // Collision detection (AABB)
-      for (const o of obstacles) {
-        if (o.x < player.x + player.w &&
-            o.x + o.w > player.x &&
-            o.y < player.y + player.h &&
-            o.y + o.h > player.y) {
-          gameState = STATE.GAMEOVER;
-          playBtn.style.display = 'inline-block';
-          playBtn.textContent = 'Play Again';
-        }
-      }
-
-      // Score by survival time
-      score += dt * 60; // ~60 points per second
-    }
-
-    // Draw (playing)
-    function drawPlaying(dt) {
-      drawRoad(dt);
-      // Score
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '16px system-ui, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(`Score: ${Math.floor(score)}`, 12, 24);
-
-      // Obstacles
-      obstacles.forEach(drawObstacle);
-      // Player
-      drawPlayer();
-    }
-
-    // Main loop
-    function loop(now) {
-      const dt = Math.min((now - last) / 1000, 0.033); // clamp delta
-      last = now;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (gameState === STATE.MENU) {
-        drawMenu();
-      } else if (gameState === STATE.PLAYING) {
-        trySpawn(dt);
-        update(dt);
-        drawPlaying(dt);
-      } else if (gameState === STATE.GAMEOVER) {
-        drawPlaying(dt);
-        drawGameOver();
-      }
-
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
-
-    // Button
-    playBtn.addEventListener('click', () => {
-      startGame();
-    });
-
-    // Start in menu, show button
-    gameState = STATE.MENU;
-    playBtn.style.display = 'inline-block';
-  </script>
+// Start in menu
+gameState = STATE.MENU;
+playBtn.style.display = "inline-block";
+lastTime = performance.now();
+requestAnimationFrame(loop);
+</script>
 </body>
 </html>
